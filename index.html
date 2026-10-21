@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>9-dars</title>
+<title>Stickman Party - AI Bots & Real Online</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;900&display=swap');
 
@@ -122,6 +122,21 @@
     gap: 8px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.25);
   }
+  .bot-badge-toggle {
+    background: #5f27cd;
+    color: #fff;
+    font-weight: 900;
+    font-size: 14px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #3b1787;
+    transition: 0.1s;
+  }
+  .bot-badge-toggle.disabled {
+    background: #576574;
+    box-shadow: 0 4px 0 #222f3e;
+  }
 
   .player-selector {
     display: flex;
@@ -238,6 +253,37 @@
     cursor: pointer;
   }
 
+  /* Online Screen */
+  .online-box {
+    text-align: center;
+    background: rgba(255,255,255,0.05);
+    padding: 24px 40px;
+    border-radius: 20px;
+    border: 2px solid rgba(255,255,255,0.1);
+    margin-bottom: 20px;
+  }
+  .online-input-code {
+    background: #ffffff;
+    color: #2f3542;
+    font-family: 'Fredoka One', cursive;
+    font-size: 32px;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    text-align: center;
+    width: 220px;
+    padding: 8px 12px;
+    border-radius: 16px;
+    border: none;
+    outline: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .online-status-text {
+    font-size: 14px;
+    color: #2ed573;
+    font-weight: 800;
+    margin-top: 10px;
+  }
+
   /* HUD */
   #gameCanvas {
     position: absolute;
@@ -334,11 +380,12 @@
       <span>S</span><span>T</span><span>I</span><span>C</span><span>K</span><span>M</span><span>A</span><span>N</span>
       <span>P</span><span>A</span><span>R</span><span>T</span><span>Y</span>
     </div>
-    <div class="sub-tagline">Toʻrt doʻst. Bitta klaviatura. 9 ta ajoyib oʻyin!</div>
+    <div class="sub-tagline">Toʻrt doʻst yoki Aqlli Botlar. Bitta klaviatura. 9 ta oʻyin!</div>
 
     <div class="profile-bar">
       <input type="text" id="playerName" class="input-name" value="Abudevix" maxlength="12">
       <div class="coin-badge">🟡 <span id="coinCount">40</span></div>
+      <div class="bot-badge-toggle" id="botToggleBtn" onclick="toggleBots()">🤖 Bots: ON</div>
     </div>
 
     <div class="player-selector">
@@ -352,26 +399,44 @@
       <button class="btn-game btn-modes" onclick="showScreen('screen-modes')">Game Modes</button>
       <button class="btn-game btn-ctrls" onclick="showControls()">Controls</button>
       <button class="btn-game btn-restart" onclick="restartStats()">Restart</button>
-      <button class="btn-game btn-online" onclick="alert('Online server tayyor!')">Online</button>
+      <button class="btn-game btn-online" onclick="showScreen('screen-online')">Online</button>
     </div>
 
-    <button class="btn-game btn-market" onclick="alert('Bozor: Barcha buyumlar ochilgan!')">Market</button>
+    <button class="btn-game btn-market" onclick="alert('Doʻkon: Barcha kiyimlar va aksessuarlar hisobingizga ochilgan!')">Market</button>
 
     <canvas id="menuStickmenCanvas" class="menu-stickmen-canvas" width="960" height="120"></canvas>
     <div class="sound-bar" onclick="toggleSound()">Sounds: <span id="soundStatus">On</span></div>
   </div>
 
-  <!-- 2. GAME MODES (9 TA O'YIN) -->
+  <!-- 2. ONLINE XONA ULANISH (CUSTOM CODE) -->
+  <div id="screen-online" class="screen hidden">
+    <h2 style="font-family:'Fredoka One', cursive; font-size: 36px; margin-bottom: 12px;">Online Party · Up to 4 Players</h2>
+    <div class="online-box">
+      <div style="font-size:14px; color:#ced6e0; margin-bottom:10px;">Xona kodini kiriting yoki yangi xona oching:</div>
+      <div style="display:flex; gap:12px; justify-content:center; align-items:center; margin-bottom: 16px;">
+        <button class="btn-game btn-modes" onclick="generateRandomRoomCode()">Generate</button>
+        <input type="text" id="customRoomInput" class="online-input-code" value="HHMW" maxlength="4">
+        <button class="btn-game btn-ctrls" onclick="joinCustomRoom()">Join Room</button>
+      </div>
+      <div class="online-status-text" id="onlineStatusLabel">Xona kodi tayyor. Ulanganlar: 1/4</div>
+    </div>
+    <div style="display:flex; gap:12px;">
+      <button class="btn-game btn-play" onclick="startGame('Racing')">Start Game</button>
+      <button class="btn-back" onclick="showScreen('screen-main')">Back</button>
+    </div>
+  </div>
+
+  <!-- 3. GAME MODES (9 TA O'YIN) -->
   <div id="screen-modes" class="screen hidden">
     <h2 style="font-family:'Fredoka One', cursive; font-size: 34px; margin-bottom: 8px;">Pick your game (9 Modes)</h2>
     <div class="grid-modes">
       <div class="card-mode" onclick="startGame('Racing')">
         <h3 style="color:#ff9f1a;">🏎️ Mashinalar poygasi</h3>
-        <p>5 ta aylanani (lap) birinchi bo'lib bosib o'tgan haydovchi g'olib bo'ladi!</p>
+        <p>5 ta aylanani (lap) birinchi bo'lib bosib o'tgan g'olib bo'ladi!</p>
       </div>
       <div class="card-mode" onclick="startGame('Shooter')">
         <h3 style="color:#ff4757;">🔫 Qurolli otishma</h3>
-        <p>O'q uzib raqiblarni nishonga oling! 10 ochkoga yetgan ishtirokchi yutadi.</p>
+        <p>O'q uzib raqiblarni nishonga oling! 10 ochkoga yetgan yutadi.</p>
       </div>
       <div class="card-mode" onclick="startGame('Zombies')">
         <h3 style="color:#10ac84;">🧟 Zombilarni otish</h3>
@@ -379,7 +444,7 @@
       </div>
       <div class="card-mode" onclick="startGame('Boxing')">
         <h3 style="color:#ff6b81;">🥊 Ringdagi boks</h3>
-        <p>Aylanada 4 ta ishtirokchi bir-birini suradi. Doirada qolgan yagona kishi yutadi!</p>
+        <p>Aylanada ishtirokchilar bir-birini suradi. Doirada qolgan yagona kishi yutadi!</p>
       </div>
       <div class="card-mode" onclick="startGame('Ghost')">
         <h3 style="color:#a29bfe;">👻 Sharpadan qochish</h3>
@@ -405,7 +470,7 @@
     <button class="btn-back" onclick="showScreen('screen-main')">Back</button>
   </div>
 
-  <!-- 3. GAMEPLAY SCREEN -->
+  <!-- 4. GAMEPLAY SCREEN -->
   <div id="screen-game" class="screen hidden">
     <canvas id="gameCanvas" width="960" height="540"></canvas>
 
@@ -432,20 +497,77 @@
 </div>
 
 <script>
+/* ==============================================================
+   STATE & DATA
+   ============================================================== */
 let coins = 40;
 let soundEnabled = true;
 let playerCount = 4;
+let botsEnabled = true; // Botlar faolligi
 let activeScreen = 'screen-main';
 let currentMode = 'Racing';
 let isPaused = false;
 let gameLoopId = null;
 
-// Tugmalar taqsimoti (4 kishi uchun)
+// Online BroadcastChannel
+let onlineChannel = null;
+let currentRoomCode = "HHMW";
+let connectedClients = 1;
+
+function setupOnlineChannel(room) {
+  if (onlineChannel) onlineChannel.close();
+  currentRoomCode = room.toUpperCase();
+  onlineChannel = new BroadcastChannel("stickman_party_room_" + currentRoomCode);
+  
+  onlineChannel.onmessage = (e) => {
+    if (e.data && e.data.type === 'PING_JOIN') {
+      connectedClients++;
+      document.getElementById('onlineStatusLabel').innerText = `Xonaga do'stingiz ulandi! Jami: ${connectedClients}/4`;
+      onlineChannel.postMessage({ type: 'PONG_ACK', count: connectedClients });
+    } else if (e.data && e.data.type === 'PONG_ACK') {
+      connectedClients = e.data.count;
+      document.getElementById('onlineStatusLabel').innerText = `Xonaga muvaffaqiyatli ulandiz! Jami: ${connectedClients}/4`;
+    }
+  };
+  onlineChannel.postMessage({ type: 'PING_JOIN' });
+}
+
+function generateRandomRoomCode() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let res = "";
+  for(let i=0; i<4; i++) res += chars[Math.floor(Math.random()*chars.length)];
+  document.getElementById('customRoomInput').value = res;
+  joinCustomRoom();
+}
+
+function joinCustomRoom() {
+  const code = (document.getElementById('customRoomInput').value || "ABCD").trim().toUpperCase();
+  if (code.length !== 4) {
+    alert("Iltimos, aynan 4 ta harfdan iborat xona kodini kiriting!");
+    return;
+  }
+  setupOnlineChannel(code);
+  document.getElementById('onlineStatusLabel').innerText = `Xona [${code}] ga ulanildi! Do'stlaringizga ham shu kodni bering.`;
+}
+
+function toggleBots() {
+  botsEnabled = !botsEnabled;
+  const btn = document.getElementById('botToggleBtn');
+  if (botsEnabled) {
+    btn.classList.remove('disabled');
+    btn.innerText = "🤖 Bots: ON";
+  } else {
+    btn.classList.add('disabled');
+    btn.innerText = "🤖 Bots: OFF";
+  }
+}
+
+// 4 ta o'yinchi konfiguratsiyasi
 const PLAYER_CONFIG = [
-  { id: 1, name: "Player 1", color: "#ff4757", tagClass: "tag-p1", keys: { left: "KeyA", right: "KeyD", up: "KeyW", down: "KeyS", action: "KeyF" } },
-  { id: 2, name: "Blue",     color: "#1e90ff", tagClass: "tag-p2", keys: { left: "ArrowLeft", right: "ArrowRight", up: "ArrowUp", down: "ArrowDown", action: "ShiftRight" } },
-  { id: 3, name: "Yellow",   color: "#fed330", tagClass: "tag-p3", keys: { left: "KeyJ", right: "KeyL", up: "KeyI", down: "KeyK", action: "KeyH" } },
-  { id: 4, name: "Green",    color: "#2ed573", tagClass: "tag-p4", keys: { left: "Numpad4", right: "Numpad6", up: "Numpad8", down: "Numpad5", action: "Numpad0" } }
+  { id: 1, name: "Player 1", color: "#ff4757", tagClass: "tag-p1", isBot: false, keys: { left: "KeyA", right: "KeyD", up: "KeyW", down: "KeyS", action: "KeyF" } },
+  { id: 2, name: "Blue",     color: "#1e90ff", tagClass: "tag-p2", isBot: true,  keys: { left: "ArrowLeft", right: "ArrowRight", up: "ArrowUp", down: "ArrowDown", action: "ShiftRight" } },
+  { id: 3, name: "Yellow",   color: "#fed330", tagClass: "tag-p3", isBot: true,  keys: { left: "KeyJ", right: "KeyL", up: "KeyI", down: "KeyK", action: "KeyH" } },
+  { id: 4, name: "Green",    color: "#2ed573", tagClass: "tag-p4", isBot: true,  keys: { left: "Numpad4", right: "Numpad6", up: "Numpad8", down: "Numpad5", action: "Numpad0" } }
 ];
 
 function showScreen(id) {
@@ -474,8 +596,8 @@ function restartStats() {
 
 function showControls() {
   alert(
-    "BOSHQARUV TUGMALARI (4 O'yinchi bitta klaviaturada):\n\n" +
-    "1-O'yinchi (Qizil): W/A/S/D - Harakat, F - Otish / Zarba\n" +
+    "BOSHQARUV TUGMALARI (Botlar yoqilgan bo'lsa, bo'sh o'yinchilarni avtomatik AI boshqaradi):\n\n" +
+    "1-O'yinchi (Siz - Qizil): W/A/S/D - Harakat, F - Otish / Zarba\n" +
     "2-O'yinchi (Ko'k): Yo'nalish ko'rsatkichlari (▲/◄/▼/►), O'ng Shift - Otish\n" +
     "3-O'yinchi (Sariq): I/J/K/L - Harakat, H - Otish / Zarba\n" +
     "4-O'yinchi (Yashil): Numpad 8/4/5/6 - Harakat, Numpad 0 - Otish"
@@ -489,9 +611,9 @@ const menuCanvas = document.getElementById('menuStickmenCanvas');
 const menuCtx = menuCanvas.getContext('2d');
 let menuDudes = [
   { x: 120, color: "#ff4757", name: "Player 1" },
-  { x: 340, color: "#1e90ff", name: "Blue" },
-  { x: 560, color: "#fed330", name: "Yellow" },
-  { x: 780, color: "#2ed573", name: "Green" }
+  { x: 340, color: "#1e90ff", name: "Blue (BOT)" },
+  { x: 560, color: "#fed330", name: "Yellow (BOT)" },
+  { x: 780, color: "#2ed573", name: "Green (BOT)" }
 ];
 let menuAnimStep = 0;
 
@@ -549,7 +671,7 @@ function animateMenu() {
 animateMenu();
 
 /* ==============================================================
-   O'YINLARNING YAGONA DVIGATELI
+   O'YINLARNING YAGONA DVIGATELI & BOT AI
    ============================================================== */
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -579,7 +701,6 @@ function exitToMainMenu() {
   showScreen('screen-main');
 }
 
-// Global o'yin o'zgaruvchilari
 let players = [];
 let bullets = [];
 let enemies = [];
@@ -597,8 +718,11 @@ function startGame(mode) {
   clearInterval(gameTimerInterval);
 
   PLAYER_CONFIG[0].name = document.getElementById('playerName').value || "Player 1";
+  PLAYER_CONFIG[0].isBot = false;
+  for (let i = 1; i < 4; i++) {
+    PLAYER_CONFIG[i].isBot = botsEnabled;
+  }
 
-  // Rejim sarlavhalari
   const overlayTitle = document.getElementById('modeTitleOverlay');
   const overlaySub = document.getElementById('modeSubOverlay');
   const infoBadge = document.getElementById('gameInfoBadge');
@@ -675,10 +799,11 @@ function startGame(mode) {
 function updateHUD() {
   const container = document.getElementById('scoresContainer');
   container.innerHTML = '';
-  players.forEach((p, i) => {
+  players.forEach((p) => {
+    let botTag = p.isBot ? " (BOT)" : "";
     container.innerHTML += `
       <div class="player-score-tag ${PLAYER_CONFIG[p.id-1].tagClass}">
-        ${p.name}: <span id="hud-score-${p.id}">${p.score}</span>
+        ${p.name}${botTag}: <span id="hud-score-${p.id}">${p.score}</span>
       </div>
     `;
   });
@@ -713,7 +838,7 @@ function declareWinner(text) {
 }
 
 /* --------------------------------------------------------------
-   1. MASHINALAR POYGASİ (RACING - 5 LAPS)
+   1. MASHINALAR POYGASİ (RACING - 5 LAPS + BOT TRAJECTORY)
    -------------------------------------------------------------- */
 function initRacing() {
   players = [];
@@ -722,35 +847,40 @@ function initRacing() {
       id: i + 1,
       name: PLAYER_CONFIG[i].name,
       color: PLAYER_CONFIG[i].color,
+      isBot: PLAYER_CONFIG[i].isBot,
       x: 480,
-      y: 440 + i * 15,
+      y: 430 + i * 16,
       angle: 0,
       speed: 0,
       laps: 0,
       checkpoint: false,
-      score: 0
+      score: 0,
+      wpIdx: 0
     });
   }
 }
 
+// Botlar aylanib yurishi uchun yo'l belgilari
+const raceWaypoints = [
+  {x: 750, y: 440}, {x: 850, y: 350}, {x: 850, y: 200}, {x: 750, y: 110},
+  {x: 480, y: 100}, {x: 210, y: 110}, {x: 120, y: 200}, {x: 120, y: 350},
+  {x: 210, y: 440}, {x: 480, y: 440}
+];
+
 function updateRacing() {
-  // Trassa chizish
   ctx.fillStyle = "#1e824c";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Asfalt
   ctx.fillStyle = "#34495e";
   ctx.beginPath();
   ctx.ellipse(480, 270, 420, 210, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Ichki o'tloq
   ctx.fillStyle = "#1e824c";
   ctx.beginPath();
   ctx.ellipse(480, 270, 240, 100, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Finish chizig'i
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 6;
   ctx.setLineDash([8, 8]);
@@ -760,31 +890,36 @@ function updateRacing() {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Checkpoint chizig'i (yuqorida)
-  ctx.strokeStyle = "rgba(255,255,255,0.2)";
-  ctx.beginPath();
-  ctx.moveTo(480, 60);
-  ctx.lineTo(480, 170);
-  ctx.stroke();
-
   players.forEach((p, idx) => {
-    let cfg = PLAYER_CONFIG[idx].keys;
-    if (keysDown[cfg.up]) p.speed = Math.min(p.speed + 0.15, 4.8);
-    else if (keysDown[cfg.down]) p.speed = Math.max(p.speed - 0.15, -2);
-    else p.speed *= 0.96;
+    if (p.isBot) {
+      // Aqlli Bot Haydash Tizimi
+      let target = raceWaypoints[p.wpIdx];
+      let desiredAngle = Math.atan2(target.y - p.y, target.x - p.x);
+      let diff = desiredAngle - p.angle;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      while (diff > Math.PI) diff -= Math.PI * 2;
 
-    if (keysDown[cfg.left]) p.angle -= 0.055;
-    if (keysDown[cfg.right]) p.angle += 0.055;
+      p.angle += Math.max(-0.065, Math.min(0.065, diff));
+      p.speed = Math.min(p.speed + 0.12, 4.2);
+
+      if (Math.hypot(target.x - p.x, target.y - p.y) < 65) {
+        p.wpIdx = (p.wpIdx + 1) % raceWaypoints.length;
+      }
+    } else {
+      let cfg = PLAYER_CONFIG[idx].keys;
+      if (keysDown[cfg.up]) p.speed = Math.min(p.speed + 0.15, 4.8);
+      else if (keysDown[cfg.down]) p.speed = Math.max(p.speed - 0.15, -2);
+      else p.speed *= 0.96;
+
+      if (keysDown[cfg.left]) p.angle -= 0.055;
+      if (keysDown[cfg.right]) p.angle += 0.055;
+    }
 
     p.x += Math.cos(p.angle) * p.speed;
     p.y += Math.sin(p.angle) * p.speed;
 
-    // Checkpoint tekshirish (yuqori yarmi)
-    if (p.x > 460 && p.x < 500 && p.y < 200) {
-      p.checkpoint = true;
-    }
+    if (p.x > 460 && p.x < 500 && p.y < 200) p.checkpoint = true;
 
-    // Finishdan o'tish (lap hisoblash)
     if (p.checkpoint && p.x > 470 && p.x < 490 && p.y > 360) {
       p.laps++;
       p.score = p.laps;
@@ -796,7 +931,6 @@ function updateRacing() {
       }
     }
 
-    // Mashinani chizish
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate(p.angle);
@@ -814,7 +948,7 @@ function updateRacing() {
 }
 
 /* --------------------------------------------------------------
-   2. QUROLLI OTISHMA (SHOOTER - 10 KILLS)
+   2. QUROLLI OTISHMA (SHOOTER + BOT AI)
    -------------------------------------------------------------- */
 function initTopDownShooter() {
   players = [];
@@ -824,6 +958,7 @@ function initTopDownShooter() {
       id: i + 1,
       name: PLAYER_CONFIG[i].name,
       color: PLAYER_CONFIG[i].color,
+      isBot: PLAYER_CONFIG[i].isBot,
       x: coords[i].x,
       y: coords[i].y,
       angle: 0,
@@ -838,28 +973,41 @@ function updateShooter() {
   ctx.fillStyle = "#2c3e50";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // To'siqlar
   ctx.fillStyle = "#1a252f";
   ctx.fillRect(380, 180, 200, 40);
   ctx.fillRect(380, 320, 200, 40);
 
-  // O'yinchilar
   players.forEach((p, idx) => {
-    let cfg = PLAYER_CONFIG[idx].keys;
-    let dx = 0, dy = 0;
-    if (keysDown[cfg.left]) dx -= 3.2;
-    if (keysDown[cfg.right]) dx += 3.2;
-    if (keysDown[cfg.up]) dy -= 3.2;
-    if (keysDown[cfg.down]) dy += 3.2;
+    let shoot = false;
+    if (p.isBot) {
+      // Bot eng yaqin raqibga burilib o'q uzadi
+      let targets = players.filter(t => t.id !== p.id && t.alive);
+      if (targets.length > 0) {
+        let t = targets[0];
+        p.angle = Math.atan2(t.y - p.y, t.x - p.x);
+        p.x += Math.cos(p.angle) * 2.2;
+        p.y += Math.sin(p.angle) * 2.2;
+        if (Math.hypot(t.x - p.x, t.y - p.y) < 300) shoot = true;
+      }
+    } else {
+      let cfg = PLAYER_CONFIG[idx].keys;
+      let dx = 0, dy = 0;
+      if (keysDown[cfg.left]) dx -= 3.2;
+      if (keysDown[cfg.right]) dx += 3.2;
+      if (keysDown[cfg.up]) dy -= 3.2;
+      if (keysDown[cfg.down]) dy += 3.2;
 
-    p.x = Math.max(20, Math.min(canvas.width - 20, p.x + dx));
-    p.y = Math.max(20, Math.min(canvas.height - 20, p.y + dy));
-    if (dx !== 0 || dy !== 0) p.angle = Math.atan2(dy, dx);
+      p.x += dx; p.y += dy;
+      if (dx !== 0 || dy !== 0) p.angle = Math.atan2(dy, dx);
+      shoot = keysDown[cfg.action];
+    }
+
+    p.x = Math.max(25, Math.min(canvas.width - 25, p.x));
+    p.y = Math.max(25, Math.min(canvas.height - 25, p.y));
 
     if (p.reload > 0) p.reload--;
 
-    // O'q uzish
-    if (keysDown[cfg.action] && p.reload <= 0) {
+    if (shoot && p.reload <= 0) {
       bullets.push({
         x: p.x + Math.cos(p.angle) * 20,
         y: p.y + Math.sin(p.angle) * 20,
@@ -868,10 +1016,9 @@ function updateShooter() {
         ownerId: p.id,
         color: p.color
       });
-      p.reload = 18;
+      p.reload = 20;
     }
 
-    // Chizish
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate(p.angle);
@@ -879,13 +1026,11 @@ function updateShooter() {
     ctx.beginPath();
     ctx.arc(0, 0, 15, 0, Math.PI * 2);
     ctx.fill();
-    // Qurol
     ctx.fillStyle = "#ecf0f1";
     ctx.fillRect(5, -4, 18, 8);
     ctx.restore();
   });
 
-  // O'qlar
   for (let i = bullets.length - 1; i >= 0; i--) {
     let b = bullets[i];
     b.x += b.vx;
@@ -896,7 +1041,6 @@ function updateShooter() {
     ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
     ctx.fill();
 
-    // Tegish
     players.forEach(target => {
       if (target.id !== b.ownerId) {
         if (Math.hypot(target.x - b.x, target.y - b.y) < 18) {
@@ -905,25 +1049,20 @@ function updateShooter() {
           if (shooter) {
             shooter.score++;
             document.getElementById(`hud-score-${shooter.id}`).innerText = `${shooter.score}/10`;
-            if (shooter.score >= 10) {
-              declareWinner(`${shooter.name} 10 ta o'ldirish bilan g'olib!`);
-            }
+            if (shooter.score >= 10) declareWinner(`${shooter.name} 10 ta nishonni urib g'olib chiqdi!`);
           }
-          // Respawn
           target.x = 80 + Math.random() * (canvas.width - 160);
           target.y = 80 + Math.random() * (canvas.height - 160);
         }
       }
     });
 
-    if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
-      bullets.splice(i, 1);
-    }
+    if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) bullets.splice(i, 1);
   }
 }
 
 /* --------------------------------------------------------------
-   3. ZOMBILAR HUJUMI (ZOMBIE SURVIVAL - 50 TOTAL KILLS)
+   3. ZOMBILAR HUJUMI (SURVIVAL + BOT SHOOTING)
    -------------------------------------------------------------- */
 function initZombieSurvival() {
   players = [];
@@ -932,7 +1071,8 @@ function initZombieSurvival() {
       id: i + 1,
       name: PLAYER_CONFIG[i].name,
       color: PLAYER_CONFIG[i].color,
-      x: 400 + i * 40,
+      isBot: PLAYER_CONFIG[i].isBot,
+      x: 380 + i * 50,
       y: 270,
       angle: 0,
       score: 0,
@@ -946,7 +1086,6 @@ function updateZombies() {
   ctx.fillStyle = "#1b262c";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Yangi zombilar tug'ilishi
   if (Math.random() < 0.045 && enemies.length < 25) {
     let side = Math.floor(Math.random() * 4);
     let zx = 0, zy = 0;
@@ -954,26 +1093,43 @@ function updateZombies() {
     else if (side === 1) { zx = canvas.width + 20; zy = Math.random() * canvas.height; }
     else if (side === 2) { zx = Math.random() * canvas.width; zy = canvas.height + 20; }
     else { zx = -20; zy = Math.random() * canvas.height; }
-
     enemies.push({ x: zx, y: zy, speed: 1.4 + Math.random() * 0.8 });
   }
 
-  // Odamlar
   players.forEach((p, idx) => {
-    let cfg = PLAYER_CONFIG[idx].keys;
-    let dx = 0, dy = 0;
-    if (keysDown[cfg.left]) dx -= 3.2;
-    if (keysDown[cfg.right]) dx += 3.2;
-    if (keysDown[cfg.up]) dy -= 3.2;
-    if (keysDown[cfg.down]) dy += 3.2;
+    let shoot = false;
+    if (p.isBot) {
+      if (enemies.length > 0) {
+        let nearest = enemies[0];
+        let nd = 9999;
+        enemies.forEach(z => {
+          let d = Math.hypot(z.x - p.x, z.y - p.y);
+          if (d < nd) { nd = d; nearest = z; }
+        });
+        p.angle = Math.atan2(nearest.y - p.y, nearest.x - p.x);
+        if (nd < 90) {
+          p.x -= Math.cos(p.angle) * 2;
+          p.y -= Math.sin(p.angle) * 2;
+        }
+        shoot = true;
+      }
+    } else {
+      let cfg = PLAYER_CONFIG[idx].keys;
+      let dx = 0, dy = 0;
+      if (keysDown[cfg.left]) dx -= 3.2;
+      if (keysDown[cfg.right]) dx += 3.2;
+      if (keysDown[cfg.up]) dy -= 3.2;
+      if (keysDown[cfg.down]) dy += 3.2;
+      p.x += dx; p.y += dy;
+      if (dx !== 0 || dy !== 0) p.angle = Math.atan2(dy, dx);
+      shoot = keysDown[cfg.action];
+    }
 
-    p.x = Math.max(20, Math.min(canvas.width - 20, p.x + dx));
-    p.y = Math.max(20, Math.min(canvas.height - 20, p.y + dy));
-    if (dx !== 0 || dy !== 0) p.angle = Math.atan2(dy, dx);
+    p.x = Math.max(20, Math.min(canvas.width - 20, p.x));
+    p.y = Math.max(20, Math.min(canvas.height - 20, p.y));
 
     if (p.reload > 0) p.reload--;
-
-    if (keysDown[cfg.action] && p.reload <= 0) {
+    if (shoot && p.reload <= 0) {
       bullets.push({
         x: p.x,
         y: p.y,
@@ -981,7 +1137,7 @@ function updateZombies() {
         vy: Math.sin(p.angle) * 9,
         ownerId: p.id
       });
-      p.reload = 14;
+      p.reload = 16;
     }
 
     ctx.save();
@@ -996,7 +1152,6 @@ function updateZombies() {
     ctx.restore();
   });
 
-  // Zombilarni harakatlantirish (eng yaqin odamga qarab boradi)
   for (let z of enemies) {
     let nearestP = players[0];
     let minDist = 9999;
@@ -1009,7 +1164,6 @@ function updateZombies() {
     z.x += Math.cos(angle) * z.speed;
     z.y += Math.sin(angle) * z.speed;
 
-    // Chizish (Zombi - yashil sharpali)
     ctx.save();
     ctx.translate(z.x, z.y);
     ctx.rotate(angle);
@@ -1021,15 +1175,8 @@ function updateZombies() {
     ctx.fillRect(5, -6, 6, 4);
     ctx.fillRect(5, 2, 6, 4);
     ctx.restore();
-
-    // Zombi odamni tishlasa (itarib tashlaydi)
-    if (minDist < 20) {
-      nearestP.x += Math.cos(angle) * 20;
-      nearestP.y += Math.sin(angle) * 20;
-    }
   }
 
-  // O'qlar va zombilar to'qnashuvi
   for (let bi = bullets.length - 1; bi >= 0; bi--) {
     let b = bullets[bi];
     b.x += b.vx;
@@ -1057,23 +1204,20 @@ function updateZombies() {
 
         if (zombiesKilledTotal >= 50) {
           let winner = players.reduce((p, c) => (p.score > c.score ? p : c));
-          declareWinner(`${winner.name} 50 ta zombini o'ldirishda eng ko'p natija (${winner.score} ta) bilan yutdi!`);
+          declareWinner(`${winner.name} 50 ta zombini yo'q qilishda eng yuqori natija (${winner.score} ta) ko'rsatdi!`);
         }
         break;
       }
     }
 
-    if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
-      bullets.splice(bi, 1);
-    }
+    if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) bullets.splice(bi, 1);
   }
 }
 
 /* --------------------------------------------------------------
-   4. BOKS RINGI (SUMO / RING SURVIVAL)
+   4. BOKS RINGI (BOT PUSHING LOGIC)
    -------------------------------------------------------------- */
 let ringRadius = 200;
-
 function initBoxing() {
   players = [];
   const angles = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
@@ -1082,6 +1226,7 @@ function initBoxing() {
       id: i + 1,
       name: PLAYER_CONFIG[i].name,
       color: PLAYER_CONFIG[i].color,
+      isBot: PLAYER_CONFIG[i].isBot,
       x: 480 + Math.cos(angles[i]) * 100,
       y: 270 + Math.sin(angles[i]) * 100,
       vx: 0,
@@ -1096,7 +1241,6 @@ function updateBoxing() {
   ctx.fillStyle = "#1e130c";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Ring doirasi
   ctx.beginPath();
   ctx.arc(480, 270, ringRadius, 0, Math.PI * 2);
   ctx.fillStyle = "#d35400";
@@ -1110,45 +1254,52 @@ function updateBoxing() {
   players.forEach((p, idx) => {
     if (!p.alive) return;
 
-    let cfg = PLAYER_CONFIG[idx].keys;
-    if (keysDown[cfg.left]) p.vx -= 0.6;
-    if (keysDown[cfg.right]) p.vx += 0.6;
-    if (keysDown[cfg.up]) p.vy -= 0.6;
-    if (keysDown[cfg.down]) p.vy += 0.6;
+    if (p.isBot) {
+      // Bot boshqa raqiblarni markazdan surib chiqarishga intiladi
+      let opponents = players.filter(o => o.id !== p.id && o.alive);
+      if (opponents.length > 0) {
+        let opp = opponents[0];
+        let ang = Math.atan2(opp.y - p.y, opp.x - p.x);
+        p.vx += Math.cos(ang) * 0.45;
+        p.vy += Math.sin(ang) * 0.45;
+      }
+    } else {
+      let cfg = PLAYER_CONFIG[idx].keys;
+      if (keysDown[cfg.left]) p.vx -= 0.6;
+      if (keysDown[cfg.right]) p.vx += 0.6;
+      if (keysDown[cfg.up]) p.vy -= 0.6;
+      if (keysDown[cfg.down]) p.vy += 0.6;
+    }
 
     p.vx *= 0.92;
     p.vy *= 0.92;
     p.x += p.vx;
     p.y += p.vy;
 
-    // Doiradan chiqish tekshiruvi
     let distFromCenter = Math.hypot(p.x - 480, p.y - 270);
     if (distFromCenter > ringRadius) {
       p.alive = false;
       document.getElementById(`hud-score-${p.id}`).innerText = "OUT ❌";
     }
 
-    // Bir-birini itarish (Zarba)
     players.forEach(other => {
       if (other.id !== p.id && other.alive) {
         let d = Math.hypot(other.x - p.x, other.y - p.y);
         if (d < 35) {
           let ang = Math.atan2(other.y - p.y, other.x - p.x);
-          let punch = keysDown[cfg.action] ? 9 : 4.5;
+          let punch = 6.5;
           other.vx += Math.cos(ang) * punch;
           other.vy += Math.sin(ang) * punch;
         }
       }
     });
 
-    // Bokschi tanasi
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.fillStyle = p.color;
     ctx.beginPath();
     ctx.arc(0, 0, 16, 0, Math.PI * 2);
     ctx.fill();
-    // Boks qo'lqoplari
     ctx.fillStyle = "#c0392b";
     ctx.beginPath();
     ctx.arc(14, -8, 7, 0, Math.PI * 2);
@@ -1157,15 +1308,14 @@ function updateBoxing() {
     ctx.restore();
   });
 
-  // G'olibni aniqlash
   if (aliveList.length <= 1) {
     let winner = aliveList[0] || players[0];
-    declareWinner(`${winner.name} doirada oxirgi qolib g'alaba qozondi!`);
+    declareWinner(`${winner.name} doirada oxirgi qolib chempion bo'ldi!`);
   }
 }
 
 /* --------------------------------------------------------------
-   5. SHARPADAN QOCHISH (GHOST CHASE)
+   5. SHARPADAN QOCHISH (BOT DODGE LOGIC)
    -------------------------------------------------------------- */
 function initGhostChase() {
   players = [];
@@ -1175,6 +1325,7 @@ function initGhostChase() {
       id: i + 1,
       name: PLAYER_CONFIG[i].name,
       color: PLAYER_CONFIG[i].color,
+      isBot: PLAYER_CONFIG[i].isBot,
       x: coords[i].x,
       y: coords[i].y,
       alive: true,
@@ -1182,7 +1333,6 @@ function initGhostChase() {
     });
   }
 
-  // 2 ta daxshatli sharpa
   enemies = [
     { x: 480, y: 270, vx: 2.8, vy: 2.2, size: 28 },
     { x: 480, y: 270, vx: -2.4, vy: -2.8, size: 28 }
@@ -1193,9 +1343,7 @@ function updateGhost() {
   ctx.fillStyle = "#0c0814";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Sharpalar harakati
   enemies.forEach(g => {
-    // Eng yaqin tirik odamni quvlaydi
     let liveP = players.filter(p => p.alive);
     if (liveP.length > 0) {
       let target = liveP[0];
@@ -1208,11 +1356,9 @@ function updateGhost() {
     g.x += g.vx;
     g.y += g.vy;
 
-    // Devordan qaytish
     if (g.x < 30 || g.x > canvas.width - 30) g.vx *= -1;
     if (g.y < 30 || g.y > canvas.height - 30) g.vy *= -1;
 
-    // Sharpa chizish
     ctx.save();
     ctx.translate(g.x, g.y);
     ctx.fillStyle = "rgba(236, 240, 241, 0.85)";
@@ -1222,7 +1368,6 @@ function updateGhost() {
     ctx.lineTo(-g.size, g.size);
     ctx.closePath();
     ctx.fill();
-    // Qizil ko'zlar
     ctx.fillStyle = "#e74c3c";
     ctx.beginPath();
     ctx.arc(-8, -6, 5, 0, Math.PI * 2);
@@ -1231,26 +1376,35 @@ function updateGhost() {
     ctx.restore();
   });
 
-  // O'yinchilar harakati
   let liveCount = 0;
   let lastSurvivor = null;
 
   players.forEach((p, idx) => {
     if (!p.alive) return;
-
     liveCount++;
     lastSurvivor = p;
 
-    let cfg = PLAYER_CONFIG[idx].keys;
-    if (keysDown[cfg.left]) p.x -= 3.6;
-    if (keysDown[cfg.right]) p.x += 3.6;
-    if (keysDown[cfg.up]) p.y -= 3.6;
-    if (keysDown[cfg.down]) p.y += 3.6;
+    if (p.isBot) {
+      // Bot sharpalardan teskari tarafga qochadi
+      enemies.forEach(g => {
+        let d = Math.hypot(p.x - g.x, p.y - g.y);
+        if (d < 220) {
+          let ang = Math.atan2(p.y - g.y, p.x - g.x);
+          p.x += Math.cos(ang) * 3.4;
+          p.y += Math.sin(ang) * 3.4;
+        }
+      });
+    } else {
+      let cfg = PLAYER_CONFIG[idx].keys;
+      if (keysDown[cfg.left]) p.x -= 3.6;
+      if (keysDown[cfg.right]) p.x += 3.6;
+      if (keysDown[cfg.up]) p.y -= 3.6;
+      if (keysDown[cfg.down]) p.y += 3.6;
+    }
 
     p.x = Math.max(25, Math.min(canvas.width - 25, p.x));
     p.y = Math.max(25, Math.min(canvas.height - 25, p.y));
 
-    // Sharpaga tegib ketish
     enemies.forEach(g => {
       if (Math.hypot(p.x - g.x, p.y - g.y) < 36) {
         p.alive = false;
@@ -1258,7 +1412,6 @@ function updateGhost() {
       }
     });
 
-    // O'yinchini chizish
     ctx.fillStyle = p.color;
     ctx.beginPath();
     ctx.arc(p.x, p.y, 14, 0, Math.PI * 2);
@@ -1271,7 +1424,7 @@ function updateGhost() {
 }
 
 /* --------------------------------------------------------------
-   6. TANKLAR JANGI (TANK BATTLE - LAST SURVIVOR)
+   6. TANKLAR JANGI (BOT TANK COMBAT)
    -------------------------------------------------------------- */
 function initTanks() {
   players = [];
@@ -1287,6 +1440,7 @@ function initTanks() {
       id: i + 1,
       name: PLAYER_CONFIG[i].name,
       color: PLAYER_CONFIG[i].color,
+      isBot: PLAYER_CONFIG[i].isBot,
       x: coords[i].x,
       y: coords[i].y,
       angle: coords[i].a,
@@ -1301,7 +1455,6 @@ function updateTanks() {
   ctx.fillStyle = "#3e4a3d";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Beton to'siqlar
   ctx.fillStyle = "#7f8c8d";
   ctx.fillRect(260, 160, 60, 220);
   ctx.fillRect(640, 160, 60, 220);
@@ -1314,24 +1467,37 @@ function updateTanks() {
     liveCount++;
     survivor = p;
 
-    let cfg = PLAYER_CONFIG[idx].keys;
-    if (keysDown[cfg.left]) p.angle -= 0.055;
-    if (keysDown[cfg.right]) p.angle += 0.055;
+    let shoot = false;
+    if (p.isBot) {
+      let targets = players.filter(t => t.id !== p.id && t.alive);
+      if (targets.length > 0) {
+        let t = targets[0];
+        let desired = Math.atan2(t.y - p.y, t.x - p.x);
+        p.angle = desired;
+        p.x += Math.cos(p.angle) * 1.8;
+        p.y += Math.sin(p.angle) * 1.8;
+        shoot = true;
+      }
+    } else {
+      let cfg = PLAYER_CONFIG[idx].keys;
+      if (keysDown[cfg.left]) p.angle -= 0.055;
+      if (keysDown[cfg.right]) p.angle += 0.055;
 
-    let move = 0;
-    if (keysDown[cfg.up]) move = 3;
-    if (keysDown[cfg.down]) move = -2;
+      let move = 0;
+      if (keysDown[cfg.up]) move = 3;
+      if (keysDown[cfg.down]) move = -2;
 
-    p.x += Math.cos(p.angle) * move;
-    p.y += Math.sin(p.angle) * move;
+      p.x += Math.cos(p.angle) * move;
+      p.y += Math.sin(p.angle) * move;
+      shoot = keysDown[cfg.action];
+    }
 
     p.x = Math.max(25, Math.min(canvas.width - 25, p.x));
     p.y = Math.max(25, Math.min(canvas.height - 25, p.y));
 
     if (p.reload > 0) p.reload--;
 
-    // O'q uzish
-    if (keysDown[cfg.action] && p.reload <= 0) {
+    if (shoot && p.reload <= 0) {
       bullets.push({
         x: p.x + Math.cos(p.angle) * 26,
         y: p.y + Math.sin(p.angle) * 26,
@@ -1342,7 +1508,6 @@ function updateTanks() {
       p.reload = 35;
     }
 
-    // Tank chizish
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate(p.angle);
@@ -1351,13 +1516,11 @@ function updateTanks() {
     ctx.fillRect(-18, 8, 36, 6);
     ctx.fillStyle = p.color;
     ctx.fillRect(-14, -10, 28, 20);
-    // Dulo
     ctx.fillStyle = "#111";
     ctx.fillRect(0, -3, 24, 6);
     ctx.restore();
   });
 
-  // Tank o'qlari
   for (let bi = bullets.length - 1; bi >= 0; bi--) {
     let b = bullets[bi];
     b.x += b.vx;
@@ -1368,7 +1531,6 @@ function updateTanks() {
     ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Portlatish tekshiruvi
     players.forEach(target => {
       if (target.alive && target.id !== b.ownerId) {
         if (Math.hypot(target.x - b.x, target.y - b.y) < 22) {
@@ -1379,9 +1541,7 @@ function updateTanks() {
       }
     });
 
-    if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
-      bullets.splice(bi, 1);
-    }
+    if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) bullets.splice(bi, 1);
   }
 
   if (liveCount <= 1 && survivor) {
@@ -1390,7 +1550,7 @@ function updateTanks() {
 }
 
 /* --------------------------------------------------------------
-   7. FUTBOL (10 GOL)
+   7. FUTBOL (BOT SOCCER AGENTS)
    -------------------------------------------------------------- */
 let soccerScores = { left: 0, right: 0 };
 function initSoccer() {
@@ -1403,6 +1563,8 @@ function initSoccer() {
       id: i + 1,
       name: PLAYER_CONFIG[i].name,
       color: PLAYER_CONFIG[i].color,
+      isBot: PLAYER_CONFIG[i].isBot,
+      team: (i % 2 === 0) ? 'left' : 'right',
       x: spacing * (i + 1),
       y: 440,
       vx: 0,
@@ -1433,12 +1595,23 @@ function updateSoccer() {
   if (soccerBall.x > canvas.width - 15) { soccerBall.x = canvas.width - 15; soccerBall.vx *= -0.8; }
 
   players.forEach((p, idx) => {
-    let cfg = PLAYER_CONFIG[idx].keys;
-    if (keysDown[cfg.left]) p.vx = -4.5;
-    else if (keysDown[cfg.right]) p.vx = 4.5;
-    else p.vx *= 0.8;
+    if (p.isBot) {
+      // Bot to'p qayerda bo'lsa o'sha yoqqa intiladi
+      if (soccerBall.x > p.x) p.vx = 4;
+      else p.vx = -4;
+      if (Math.abs(soccerBall.x - p.x) < 40 && soccerBall.y < p.y && p.isGrounded) {
+        p.vy = -11;
+        p.isGrounded = false;
+      }
+    } else {
+      let cfg = PLAYER_CONFIG[idx].keys;
+      if (keysDown[cfg.left]) p.vx = -4.5;
+      else if (keysDown[cfg.right]) p.vx = 4.5;
+      else p.vx *= 0.8;
 
-    if (keysDown[cfg.up] && p.isGrounded) { p.vy = -12; p.isGrounded = false; }
+      if (keysDown[cfg.up] && p.isGrounded) { p.vy = -12; p.isGrounded = false; }
+    }
+
     p.vy += 0.52;
     p.x += p.vx;
     p.y += p.vy;
@@ -1448,8 +1621,8 @@ function updateSoccer() {
     let d = Math.hypot(soccerBall.x - p.x, soccerBall.y - p.y);
     if (d < 32) {
       let ang = Math.atan2(soccerBall.y - p.y, soccerBall.x - p.x);
-      soccerBall.vx = Math.cos(ang) * 8 + p.vx * 0.5;
-      soccerBall.vy = Math.sin(ang) * 8 - 3;
+      soccerBall.vx = Math.cos(ang) * 8.5 + p.vx * 0.5;
+      soccerBall.vy = Math.sin(ang) * 8.5 - 3;
     }
 
     drawStickman(ctx, p.x, p.y, p.color, 0, p.name);
@@ -1477,17 +1650,18 @@ function updateSoccer() {
 }
 
 /* --------------------------------------------------------------
-   8. BEYSBOL (10 BALL)
+   8. BEYSBOL (BOT AUTO BAT SWING)
    -------------------------------------------------------------- */
 function initBaseball() {
   players = [];
-  enemies = []; // to'plar
+  enemies = [];
   const spacing = canvas.width / (playerCount + 1);
   for (let i = 0; i < playerCount; i++) {
     players.push({
       id: i + 1,
       name: PLAYER_CONFIG[i].name,
       color: PLAYER_CONFIG[i].color,
+      isBot: PLAYER_CONFIG[i].isBot,
       x: spacing * (i + 1),
       y: 440,
       score: 0
@@ -1509,15 +1683,22 @@ function updateBaseball() {
   }
 
   players.forEach((p, idx) => {
-    let cfg = PLAYER_CONFIG[idx].keys;
-    if (keysDown[cfg.left]) p.x -= 4;
-    if (keysDown[cfg.right]) p.x += 4;
-    let hit = keysDown[cfg.action];
+    let hit = false;
+    if (p.isBot) {
+      enemies.forEach(b => {
+        if (!b.hit && Math.abs(b.x - p.x) < 45) hit = true;
+      });
+    } else {
+      let cfg = PLAYER_CONFIG[idx].keys;
+      if (keysDown[cfg.left]) p.x -= 4;
+      if (keysDown[cfg.right]) p.x += 4;
+      hit = keysDown[cfg.action];
+    }
 
     drawStickman(ctx, p.x, p.y, p.color, 0, p.name);
 
     enemies.forEach(b => {
-      if (!b.hit && hit && Math.hypot(p.x - b.x, p.y - b.y) < 40) {
+      if (!b.hit && hit && Math.hypot(p.x - b.x, p.y - b.y) < 42) {
         b.hit = true;
         b.vx = -b.vx * 1.5;
         p.score++;
@@ -1539,7 +1720,7 @@ function updateBaseball() {
 }
 
 /* --------------------------------------------------------------
-   9. TANGA YIG'ISH (COINS - 30s)
+   9. TANGA YIG'ISH (BOT COIN COLLECTING)
    -------------------------------------------------------------- */
 function initCoins() {
   players = [];
@@ -1551,6 +1732,7 @@ function initCoins() {
       id: i + 1,
       name: PLAYER_CONFIG[i].name,
       color: PLAYER_CONFIG[i].color,
+      isBot: PLAYER_CONFIG[i].isBot,
       x: spacing * (i + 1),
       y: 440,
       score: 0
@@ -1583,9 +1765,23 @@ function updateCoins() {
   }
 
   players.forEach((p, idx) => {
-    let cfg = PLAYER_CONFIG[idx].keys;
-    if (keysDown[cfg.left]) p.x -= 4.5;
-    if (keysDown[cfg.right]) p.x += 4.5;
+    if (p.isBot) {
+      if (enemies.length > 0) {
+        let nearestCoin = enemies[0];
+        let nd = 9999;
+        enemies.forEach(c => {
+          let d = Math.abs(c.x - p.x);
+          if (d < nd) { nd = d; nearestCoin = c; }
+        });
+        if (nearestCoin.x > p.x) p.x += 3.8;
+        else p.x -= 3.8;
+      }
+    } else {
+      let cfg = PLAYER_CONFIG[idx].keys;
+      if (keysDown[cfg.left]) p.x -= 4.5;
+      if (keysDown[cfg.right]) p.x += 4.5;
+    }
+
     drawStickman(ctx, p.x, p.y, p.color, 0, p.name);
   });
 
