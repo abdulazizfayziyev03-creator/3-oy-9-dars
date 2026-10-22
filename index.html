@@ -2,1918 +2,236 @@
 <html lang="uz">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CS: STRIKE ELITE - 8v8 FPS Shooter</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0b10">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>GTA 1v1 Showdown - Multiplayer Open World City</title>
+  
+  <!-- CSS Stylesheet -->
   <link rel="stylesheet" href="main.css">
-  <!-- Three.js 3D Game Engine -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  
+  <!-- PeerJS for Realtime WebRTC 1v1 Multiplayer -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
 
-  <!-- Game Container for WebGL 3D -->
+  <!-- Main Game Container -->
   <div id="game-container">
-    <canvas id="webgl-canvas"></canvas>
+    <!-- Canvas for 2D Open World City Engine -->
+    <canvas id="gameCanvas"></canvas>
 
-    <!-- Crosshair & Dynamic Recoil -->
-    <div id="crosshair">
-      <div class="ch-dot"></div>
-      <div class="ch-line ch-top"></div>
-      <div class="ch-line ch-bottom"></div>
-      <div class="ch-line ch-left"></div>
-      <div class="ch-line ch-right"></div>
-    </div>
-
-    <!-- Hitmarker overlay -->
-    <div id="hitmarker">
-      <div class="hm-line hm-tl"></div>
-      <div class="hm-line hm-tr"></div>
-      <div class="hm-line hm-bl"></div>
-      <div class="hm-line hm-br"></div>
-    </div>
-
-    <!-- Sniper Scope Overlay (AWP, SSG 08, AUG) -->
-    <div id="sniper-scope">
-      <div class="scope-line-v"></div>
-      <div class="scope-line-h"></div>
-      <div class="scope-circle"></div>
-    </div>
-
-    <!-- Blood Damage Vignette -->
-    <div id="damage-overlay"></div>
-
-    <!-- ==================== HUD INTERFACE ==================== -->
+    <!-- IN-GAME HUD -->
     <div id="hud">
-      <!-- Top HUD: Radar, Match Score, Killfeed -->
-      <div class="hud-top">
-        <div class="radar-wrap">
-          <canvas id="radar-canvas" width="170" height="170"></canvas>
-          <div class="radar-sweep"></div>
+      <!-- Top Center Score Bar -->
+      <div class="hud-top-bar">
+        <div class="score-badge player1-score">
+          <span id="p1-hud-name">Siz</span>: <span id="score-p1">0</span>
         </div>
-
-        <div class="match-score-board">
-          <div class="team-badge ct">
-            <span class="team-name">CT</span>
-            <span class="team-score" id="score-ct">0</span>
-          </div>
-
-          <div class="round-info-center">
-            <div class="round-time" id="round-timer">02:00</div>
-            <div class="round-status" id="round-state-text">ROUND 1</div>
-          </div>
-
-          <div class="team-badge t">
-            <span class="team-score" id="score-t">0</span>
-            <span class="team-name">T</span>
-          </div>
+        <div class="vs-divider">VS</div>
+        <div class="score-badge player2-score">
+          <span id="p2-hud-name">Raqib</span>: <span id="score-p2">0</span>
         </div>
-
-        <div id="killfeed"></div>
+        <div class="target-kills">Maqsad: 5 ta o'ldirish</div>
       </div>
 
-      <!-- Center Big Announcement (Round Win, MVP) -->
-      <div id="center-announcement">
-        <div class="announce-title" id="announce-text">COUNTER-TERRORISTS WIN</div>
-        <div class="announce-sub" id="announce-subtext">+ $3,250 COINS AWARDED</div>
-      </div>
-
-      <!-- Action Key Tips -->
-      <div class="action-tips">
-        <div class="tip-pill"><span class="tip-key">B</span> Buy Menu (Do'kon)</div>
-        <div class="tip-pill"><span class="tip-key">TAB</span> Scoreboard</div>
-        <div class="tip-pill"><span class="tip-key">R</span> Reload</div>
-        <div class="tip-pill"><span class="tip-key">RMB</span> Zoom / Scope</div>
-      </div>
-
-      <!-- Bottom HUD: Health, Armor, Coins, Ammo, Weapon -->
-      <div class="hud-bottom">
-        <div class="hud-left-stats">
-          <!-- Coins / Money -->
-          <div class="coin-display">
-            <span class="coin-label">COINS / MONEY</span>
-            <div style="display:flex; align-items:baseline; gap:6px;">
-              <span class="coin-value" id="hud-coins">$1,000</span>
-              <span class="coin-delta" id="coin-delta">+$300</span>
-            </div>
+      <!-- Top Left: Player Status Bars -->
+      <div class="player-status-container">
+        <!-- Health Bar -->
+        <div class="status-bar-wrap">
+          <div class="status-bar-info">
+            <span>❤️ JON</span>
+            <span id="hud-health-val">100</span>
           </div>
-
-          <!-- Health & Armor -->
-          <div class="vitals-box">
-            <div class="vital-item health" id="vital-hp-wrap">
-              <span class="vital-icon">➕</span>
-              <div class="vital-info">
-                <span class="vital-title">HEALTH</span>
-                <span class="vital-value" id="hud-hp">100</span>
-              </div>
-            </div>
-
-            <div class="vital-item armor">
-              <span class="vital-icon">🛡️</span>
-              <div class="vital-info">
-                <span class="vital-title">ARMOR</span>
-                <span class="vital-value" id="hud-armor">100</span>
-              </div>
-            </div>
+          <div class="status-bar-bg">
+            <div id="hud-health-fill" class="status-bar-fill health-fill" style="width: 100%;"></div>
           </div>
         </div>
 
-        <!-- Weapon & Ammo Info -->
-        <div class="hud-right-stats">
-          <div class="weapon-card">
-            <span class="weapon-slot-name" id="hud-weapon-slot">PRIMARY</span>
-            <span class="weapon-title" id="hud-weapon-name">AK-47</span>
-            <div class="ammo-counter">
-              <span class="ammo-current" id="hud-ammo-cur">30</span>
-              <span class="ammo-divider">/</span>
-              <span class="ammo-reserve" id="hud-ammo-res">90</span>
-            </div>
-            <div class="reload-prompt" id="reload-prompt">RELOADING...</div>
+        <!-- Armor Bar -->
+        <div class="status-bar-wrap">
+          <div class="status-bar-info">
+            <span>🛡️ ZIRH</span>
+            <span id="hud-armor-val">50</span>
           </div>
+          <div class="status-bar-bg">
+            <div id="hud-armor-fill" class="status-bar-fill armor-fill" style="width: 50%;"></div>
+          </div>
+        </div>
+
+        <!-- Vehicle Health Bar (when inside car) -->
+        <div id="hud-car-wrap" class="status-bar-wrap" style="display: none;">
+          <div class="status-bar-info">
+            <span>🚗 MOSHINA</span>
+            <span id="hud-car-val">150</span>
+          </div>
+          <div class="status-bar-bg">
+            <div id="hud-car-fill" class="status-bar-fill car-health-fill" style="width: 100%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Right: Weapon Info & Minimap -->
+      <div class="top-right-hud">
+        <div class="weapon-box">
+          <div id="hud-weapon-icon" class="weapon-icon-disp">🔫</div>
+          <div class="weapon-details">
+            <span id="hud-weapon-name" class="weapon-name">Pistol 9mm</span>
+            <span id="hud-ammo-val" class="weapon-ammo">60</span>
+          </div>
+        </div>
+
+        <!-- Radar Minimap -->
+        <div class="minimap-container">
+          <canvas id="minimapCanvas" width="140" height="140"></canvas>
+        </div>
+      </div>
+
+      <!-- Top Utility Bar (Audio & Fullscreen) -->
+      <div class="utility-bar">
+        <button id="btn-fullscreen" class="icon-btn" title="To'liq ekran">⛶</button>
+        <button id="btn-mute" class="icon-btn" title="Ovoz yoqish/o'chirish">🔊</button>
+      </div>
+
+      <!-- Realtime Killfeed & Event Notifications -->
+      <div id="killfeed" class="killfeed"></div>
+
+      <!-- In-Game Action Helper Tooltip -->
+      <div id="action-tip" class="action-tip">🚗 Moshinaga minish: [F]</div>
+
+      <!-- Mobile Orientation Warning (Shown on mobile portrait) -->
+      <div class="landscape-hint">🔄 Yaxshiroq tajriba uchun telefonni yonboshga burang!</div>
+    </div>
+
+    <!-- MOBILE TOUCH CONTROLS OVERLAY -->
+    <div id="mobile-controls">
+      <!-- Left Virtual Joystick Zone (Movement & Steering) -->
+      <div id="joystick-zone" class="joystick-zone">
+        <div class="joystick-base">
+          <div id="joystick-thumb" class="joystick-thumb"></div>
+        </div>
+      </div>
+
+      <!-- Right Touch Action Cluster -->
+      <div class="action-cluster">
+        <!-- Top Action Buttons Row -->
+        <div class="action-row">
+          <button id="btn-touch-car" class="touch-btn car-btn" title="Moshina">
+            🚗
+            <span class="touch-btn-label">Moshina</span>
+          </button>
+          <button id="btn-touch-weapon" class="touch-btn" title="Qurol almashtirish">
+            🔄
+            <span class="touch-btn-label">Qurol</span>
+          </button>
+          <button id="btn-touch-sprint" class="touch-btn" title="Yugurish">
+            ⚡
+            <span class="touch-btn-label">Sprint</span>
+          </button>
+        </div>
+
+        <!-- Main Shoot / Attack Button -->
+        <div class="action-row">
+          <button id="btn-touch-horn" class="touch-btn" title="Signal">
+            🎺
+            <span class="touch-btn-label">Signal</span>
+          </button>
+          <button id="btn-touch-shoot" class="touch-btn shoot-btn" title="O't ochish">
+            🎯
+            <span class="touch-btn-label">OTISH</span>
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- ==================== BUY MENU (20 TA QUROL VA ZIRH) ==================== -->
-    <div id="buy-menu">
-      <div class="buy-header">
-        <div class="buy-title-group">
-          <span class="buy-title">ARSENAL SHOP</span>
-          <span class="buy-subtitle">QUROL VA ASBOB-USKUNALAR DO'KONI (20 TA QUROL)</span>
+    <!-- MAIN MENU / LOBBY OVERLAY -->
+    <div id="overlay-lobby" class="overlay-screen">
+      <!-- Main Menu Card -->
+      <div id="main-menu-card" class="card">
+        <h1 class="game-title">GTA 1v1 CITY</h1>
+        <p class="game-subtitle">Do'stlar bilan real-vaqtda duel va ochiq shahar jangi</p>
+
+        <div class="input-group">
+          <label for="player-nickname">O'yinchi Taxallusi</label>
+          <input type="text" id="player-nickname" class="custom-input" placeholder="Ismingizni yozing..." value="CJ Player" maxlength="15">
         </div>
-        <div style="display: flex; align-items:center; gap: 20px;">
-          <div class="buy-wallet">
-            <span class="wallet-label">SIZNING BALANSINGIZ:</span>
-            <span class="wallet-amount" id="shop-wallet-amount">$1,000</span>
+
+        <div class="menu-buttons">
+          <button id="btn-create-room" class="btn btn-primary">
+            🌐 Xona Yaratish (Do'st bilan 1v1)
+          </button>
+
+          <div class="input-group" style="margin-top: 10px; margin-bottom: 5px;">
+            <label for="room-code-input">Do'stingiz Xona Kodi</label>
+            <input type="text" id="room-code-input" class="custom-input" placeholder="Masalan: A7B9K" maxlength="10" style="text-transform: uppercase;">
           </div>
-          <button class="buy-close-btn" id="btn-close-shop">YOPISH [B / ESC]</button>
+
+          <button id="btn-join-room" class="btn btn-secondary">
+            ⚡ Ulanish va Jang Qilish
+          </button>
+
+          <button id="btn-solo-practice" class="btn btn-accent">
+            🤖 Mashq (AI Bot bilan 1v1)
+          </button>
+        </div>
+
+        <div class="instructions">
+          <b>🎮 Boshqaruv (Kompyuter):</b><br>
+          • <b>WASD</b> - Yurish yoki Moshinani haydash<br>
+          • <b>Sichqoncha</b> - Mo'ljal olish va Chap tugma - Otish<br>
+          • <b>F yoki Enter</b> - Moshinaga minish / tushish<br>
+          • <b>Q / E</b> - Qurollarni almashtirish (Pistol, Shotgun, AK-47, Bazuka)<br>
+          • <b>Shift</b> - Yugurish / Drift<br>
+          <br>
+          <b>📱 Boshqaruv (Telefon):</b><br>
+          • Chap virtual djoypad - Yurish / Burilish<br>
+          • O'ng tugmalar - Otish, Moshina, Qurol almashtirish va Yugurish!
         </div>
       </div>
 
-      <!-- Category Filter Tabs -->
-      <div class="buy-categories">
-        <button class="cat-tab active" data-cat="all">BARCHASI (20)</button>
-        <button class="cat-tab" data-cat="pistol">PISTOLS (6)</button>
-        <button class="cat-tab" data-cat="smg">SMGs (5)</button>
-        <button class="cat-tab" data-cat="rifle">RIFLES (6)</button>
-        <button class="cat-tab" data-cat="sniper">SNIPERS & HEAVY (3)</button>
-        <button class="cat-tab" data-cat="gear">ZIRH & GEAR (2)</button>
-      </div>
+      <!-- Host Waiting Card (Shown when Room is created) -->
+      <div id="host-waiting-box" class="card hidden">
+        <h2 class="game-title">Xona Tayyor!</h2>
+        <p class="game-subtitle">Do'stingizga quyidagi kodni yoki havolani yuboring:</p>
 
-      <!-- Weapons List Grid -->
-      <div class="weapons-grid" id="shop-weapons-grid">
-        <!-- Rendered dynamically via JavaScript -->
-      </div>
-    </div>
-
-    <!-- ==================== SCOREBOARD (TAB) ==================== -->
-    <div id="scoreboard">
-      <div class="scoreboard-container">
-        <div class="sb-header">
-          <span class="sb-title">DE_DUST2 - CS: ELITE 8v8 BATTLE</span>
-          <span class="sb-match-mode" id="sb-mode-title">8 vs 8 TEAM DEATHMATCH</span>
+        <div class="room-code-display">
+          <span style="font-size: 0.85rem; color: #cbd5e1;">XONA KODI:</span>
+          <div id="display-room-code" class="code">-----</div>
         </div>
 
-        <div class="sb-teams-wrap">
-          <!-- Counter-Terrorists Team Table -->
-          <div class="sb-team-box ct">
-            <div class="sb-team-header">
-              <span class="sb-team-title">COUNTER-TERRORISTS (CT)</span>
-              <span class="sb-score-num" id="sb-ct-score">0</span>
-            </div>
-            <table class="sb-table">
-              <thead>
-                <tr>
-                  <th>O'yinchi</th>
-                  <th>Kills</th>
-                  <th>Deaths</th>
-                  <th>Coins</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="sb-ct-body"></tbody>
-            </table>
-          </div>
+        <button id="btn-copy-code" class="btn btn-accent" style="width: 100%; margin-bottom: 12px;">
+          📋 Havolani Nusxalash
+        </button>
 
-          <!-- Terrorists Team Table -->
-          <div class="sb-team-box t">
-            <div class="sb-team-header">
-              <span class="sb-team-title">TERRORISTS (T)</span>
-              <span class="sb-score-num" id="sb-t-score">0</span>
-            </div>
-            <table class="sb-table">
-              <thead>
-                <tr>
-                  <th>O'yinchi</th>
-                  <th>Kills</th>
-                  <th>Deaths</th>
-                  <th>Coins</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="sb-t-body"></tbody>
-            </table>
-          </div>
-        </div>
+        <p style="font-size: 0.85rem; color: #38bdf8; animation: pulse 1.5s infinite;">
+          ⏳ Do'stingiz ulanishi kutilmoqda... U ulanganda jang avtomatik boshlanadi!
+        </p>
       </div>
     </div>
 
-    <!-- ==================== LOBBY / START SCREEN ==================== -->
-    <div id="lobby-screen">
-      <div class="lobby-content">
-        <h1 class="lobby-logo">COUNTER <span>STRIKE</span> ELITE</h1>
-        <p class="lobby-tagline">3D Birinchi shaxs taktik otishmasi | 8 ga 8 Jang va 20 ta Qurol</p>
+    <!-- GAME OVER / VICTORY MODAL -->
+    <div id="game-over-modal" class="overlay-screen hidden">
+      <div class="card">
+        <h2 id="winner-announcement" class="game-title" style="font-size: 1.8rem;">
+          Jang Tugadi!
+        </h2>
+        <p class="game-subtitle" id="final-stats-text">
+          G'olib aniqlandi!
+        </p>
 
-        <div class="lobby-config-grid">
-          <div class="config-card">
-            <div class="config-label">1. Jamoangizni tanlang:</div>
-            <div class="select-pills" id="team-selector">
-              <button class="pill-btn active" data-team="CT">Counter-Terrorists (Moviy)</button>
-              <button class="pill-btn" data-team="T">Terrorists (Qizil)</button>
-            </div>
-          </div>
-
-          <div class="config-card">
-            <div class="config-label">2. Jang formati (Maksimal 8 ga 8):</div>
-            <div class="select-pills" id="format-selector">
-              <button class="pill-btn" data-format="2">2 vs 2</button>
-              <button class="pill-btn" data-format="4">4 vs 4</button>
-              <button class="pill-btn active" data-format="8">8 vs 8 (Maksimal 16 o'yinchi)</button>
-            </div>
-          </div>
+        <div class="menu-buttons">
+          <button id="btn-restart-game" class="btn btn-primary">
+            🔄 Yana O'ynash
+          </button>
+          <button onclick="location.reload()" class="btn btn-outline">
+            🏠 Bosh Menyu
+          </button>
         </div>
-
-        <div class="instructions-card">
-          <div class="config-label">Boshqaruv tugmalari (Controls):</div>
-          <div class="instructions-grid">
-            <div class="inst-item"><b>WASD</b> - Yurish</div>
-            <div class="inst-item"><b>Sichqoncha</b> - Nishonga olish</div>
-            <div class="inst-item"><b>LMB (Chap)</b> - Otish</div>
-            <div class="inst-item"><b>RMB (O'ng)</b> - Optika Zoom</div>
-            <div class="inst-item"><b>B</b> - Qurol do'koni</div>
-            <div class="inst-item"><b>R</b> - Qayta o'qlash</div>
-            <div class="inst-item"><b>SPACE</b> - Sakrash</div>
-            <div class="inst-item"><b>TAB</b> - Hisoblar jadvali</div>
-          </div>
-        </div>
-
-        <button class="start-play-btn" id="btn-start-game">JANGNI BOSHLASH</button>
       </div>
     </div>
-
-    <!-- ==================== PAUSE MENU ==================== -->
-    <div id="pause-menu">
-      <div class="pause-box">
-        <h2 class="pause-title">O'YIN TO'XTATILDI</h2>
-        <button class="pause-btn" id="btn-resume">Davom ettirish</button>
-        <button class="pause-btn" id="btn-shop-from-pause">Qurollar do'koni (B)</button>
-        <button class="pause-btn danger" id="btn-restart-match">O'yinni qayta boshlash</button>
-      </div>
-    </div>
-
   </div>
 
-  <!-- ==================== GAME LOGIC SCRIPT ==================== -->
-  <script>
-    /* =========================================================================
-       AUDIO SYNTHESIS SYSTEM (Procedural Web Audio API - tashqi fayllarsiz real ovozlar)
-       ========================================================================= */
-    const SoundEngine = {
-      ctx: null,
-      init() {
-        if (!this.ctx) {
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          this.ctx = new AudioContext();
-        }
-        if (this.ctx.state === 'suspended') {
-          this.ctx.resume();
-        }
-      },
-      playShot(weaponType) {
-        if (!this.ctx) return;
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-
-        // Shovqin (Noise buffer) portlashi
-        const bufferSize = this.ctx.sampleRate * 0.15;
-        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-          data[i] = Math.random() * 2 - 1;
-        }
-
-        const noise = this.ctx.createBufferSource();
-        noise.buffer = buffer;
-        const noiseFilter = this.ctx.createBiquadFilter();
-        const noiseGain = this.ctx.createGain();
-
-        if (weaponType === 'sniper') {
-          // AWP / Scout - og'ir bas zarbasi
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(140, now);
-          osc.frequency.exponentialRampToValueAtTime(30, now + 0.35);
-          gain.gain.setValueAtTime(1.0, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-
-          noiseFilter.type = 'lowpass';
-          noiseFilter.frequency.setValueAtTime(1800, now);
-          noiseGain.gain.setValueAtTime(0.8, now);
-          noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-        } else if (weaponType === 'rifle') {
-          // AK-47 / M4A4
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(220, now);
-          osc.frequency.exponentialRampToValueAtTime(40, now + 0.18);
-          gain.gain.setValueAtTime(0.7, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-
-          noiseFilter.type = 'bandpass';
-          noiseFilter.frequency.setValueAtTime(1200, now);
-          noiseGain.gain.setValueAtTime(0.6, now);
-          noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
-        } else if (weaponType === 'smg') {
-          // MAC-10 / P90
-          osc.type = 'square';
-          osc.frequency.setValueAtTime(260, now);
-          osc.frequency.exponentialRampToValueAtTime(60, now + 0.12);
-          gain.gain.setValueAtTime(0.5, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
-
-          noiseFilter.type = 'highpass';
-          noiseFilter.frequency.setValueAtTime(800, now);
-          noiseGain.gain.setValueAtTime(0.4, now);
-          noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-        } else {
-          // Pistols (Glock, USP, Deagle)
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(300, now);
-          osc.frequency.exponentialRampToValueAtTime(60, now + 0.14);
-          gain.gain.setValueAtTime(0.6, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
-
-          noiseFilter.type = 'bandpass';
-          noiseFilter.frequency.setValueAtTime(2200, now);
-          noiseGain.gain.setValueAtTime(0.5, now);
-          noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
-        }
-
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.4);
-
-        noise.connect(noiseFilter);
-        noiseFilter.connect(noiseGain);
-        noiseGain.connect(this.ctx.destination);
-        noise.start(now);
-        noise.stop(now + 0.35);
-      },
-      playHit() {
-        if (!this.ctx) return;
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(1200, now);
-        osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
-        gain.gain.setValueAtTime(0.35, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.08);
-      },
-      playHeadshot() {
-        if (!this.ctx) return;
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(1800, now);
-        osc.frequency.setValueAtTime(2400, now + 0.05);
-        gain.gain.setValueAtTime(0.5, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.2);
-      },
-      playReload() {
-        if (!this.ctx) return;
-        const now = this.ctx.currentTime;
-        [0, 0.4, 0.8].forEach(timeOffset => {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = 'square';
-          osc.frequency.setValueAtTime(800 + timeOffset * 200, now + timeOffset);
-          gain.gain.setValueAtTime(0.15, now + timeOffset);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + timeOffset + 0.08);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start(now + timeOffset);
-          osc.stop(now + timeOffset + 0.08);
-        });
-      },
-      playBuy() {
-        if (!this.ctx) return;
-        const now = this.ctx.currentTime;
-        const notes = [523.25, 659.25, 783.99, 1046.50];
-        notes.forEach((freq, idx) => {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, now + idx * 0.06);
-          gain.gain.setValueAtTime(0.3, now + idx * 0.06);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.06 + 0.12);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start(now + idx * 0.06);
-          osc.stop(now + idx * 0.06 + 0.12);
-        });
-      },
-      playRoundStart() {
-        if (!this.ctx) return;
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(440, now);
-        osc.frequency.setValueAtTime(880, now + 0.15);
-        gain.gain.setValueAtTime(0.4, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.4);
-      }
-    };
-
-    /* =========================================================================
-       20 TA ANIQ QUROLLAR RO'YXATI VA ULARNING PARAMETRLARI
-       ========================================================================= */
-    const WEAPONS_DATABASE = [
-      // --- PISTOLS (6 ta) ---
-      { id: 'glock', name: 'Glock-18', cat: 'pistol', slot: 'secondary', price: 200, damage: 28, headshotMult: 3.5, fireRate: 400, clipSize: 20, maxAmmo: 120, reloadTime: 2.1, spread: 0.02, color: 0x333333, length: 0.5, desc: 'Boshlang\'ich T to\'pponchasi, 20 ta o\'q.' },
-      { id: 'usp', name: 'USP-S', cat: 'pistol', slot: 'secondary', price: 200, damage: 35, headshotMult: 3.8, fireRate: 350, clipSize: 12, maxAmmo: 60, reloadTime: 2.2, spread: 0.012, color: 0x22262c, length: 0.65, desc: 'O\'chirgichli, aniq CT to\'pponchasi.' },
-      { id: 'p250', name: 'P250', cat: 'pistol', slot: 'secondary', price: 300, damage: 38, headshotMult: 3.8, fireRate: 400, clipSize: 13, maxAmmo: 78, reloadTime: 2.2, spread: 0.018, color: 0x5a6065, length: 0.52, desc: 'Zirh teshuvchi arzon to\'pponcha.' },
-      { id: 'fiveseven', name: 'Five-SeveN', cat: 'pistol', slot: 'secondary', price: 500, damage: 32, headshotMult: 3.9, fireRate: 420, clipSize: 20, maxAmmo: 100, reloadTime: 2.3, spread: 0.015, color: 0x2c3e50, length: 0.55, desc: 'Katta magazinli tezkor to\'pponcha.' },
-      { id: 'deagle', name: 'Desert Eagle', cat: 'pistol', slot: 'secondary', price: 700, damage: 63, headshotMult: 4.0, fireRate: 260, clipSize: 7, maxAmmo: 42, reloadTime: 2.4, spread: 0.022, color: 0xd4af37, length: 0.6, desc: 'Kuchli zarbali afsonaviy Deagle.' },
-      { id: 'dualies', name: 'Dual Berettas', cat: 'pistol', slot: 'secondary', price: 400, damage: 38, headshotMult: 3.5, fireRate: 500, clipSize: 30, maxAmmo: 120, reloadTime: 2.7, spread: 0.025, color: 0x111111, length: 0.5, desc: 'Qo\'shaloq to\'pponcha, ko\'p o\'q.' },
-
-      // --- SMGs (5 ta) ---
-      { id: 'mac10', name: 'MAC-10', cat: 'smg', slot: 'primary', price: 1050, damage: 29, headshotMult: 3.4, fireRate: 800, clipSize: 30, maxAmmo: 120, reloadTime: 2.4, spread: 0.035, color: 0x4a4a4a, length: 0.6, desc: 'Yaqin masofada juda tezkor SMG.' },
-      { id: 'mp9', name: 'MP9', cat: 'smg', slot: 'primary', price: 1250, damage: 26, headshotMult: 3.4, fireRate: 850, clipSize: 30, maxAmmo: 120, reloadTime: 2.1, spread: 0.03, color: 0x2e3b4e, length: 0.65, desc: 'Tez otuvchi taktik SMG.' },
-      { id: 'mp7', name: 'MP7', cat: 'smg', slot: 'primary', price: 1500, damage: 29, headshotMult: 3.5, fireRate: 750, clipSize: 30, maxAmmo: 120, reloadTime: 2.8, spread: 0.024, color: 0x3d4349, length: 0.7, desc: 'Barqaror va oson boshqariluvchi.' },
-      { id: 'ump45', name: 'UMP-45', cat: 'smg', slot: 'primary', price: 1200, damage: 35, headshotMult: 3.6, fireRate: 666, clipSize: 25, maxAmmo: 100, reloadTime: 2.4, spread: 0.026, color: 0x252a30, length: 0.72, desc: 'Og\'ir kalibrli zarbali SMG.' },
-      { id: 'p90', name: 'P90', cat: 'smg', slot: 'primary', price: 2350, damage: 26, headshotMult: 3.4, fireRate: 900, clipSize: 50, maxAmmo: 150, reloadTime: 3.2, spread: 0.032, color: 0x34495e, length: 0.75, desc: '50 ta o\'qli doimiy otuvchi qurol.' },
-
-      // --- RIFLES (6 ta) ---
-      { id: 'galil', name: 'Galil AR', cat: 'rifle', slot: 'primary', price: 1800, damage: 30, headshotMult: 4.0, fireRate: 666, clipSize: 35, maxAmmo: 105, reloadTime: 2.9, spread: 0.026, color: 0x5d5345, length: 0.95, desc: 'Arzon va ishonchli 35 o\'qli avtomat.' },
-      { id: 'famas', name: 'FAMAS', cat: 'rifle', slot: 'primary', price: 2050, damage: 30, headshotMult: 4.0, fireRate: 666, clipSize: 25, maxAmmo: 90, reloadTime: 2.7, spread: 0.022, color: 0x48515c, length: 0.9, desc: 'CT jamoasining ixcham avtomati.' },
-      { id: 'ak47', name: 'AK-47', cat: 'rifle', slot: 'primary', price: 2700, damage: 36, headshotMult: 4.2, fireRate: 600, clipSize: 30, maxAmmo: 90, reloadTime: 2.4, spread: 0.022, color: 0x8b5a2b, length: 1.1, desc: 'Klassik AK-47. Bitta headshot o\'ldiradi!' },
-      { id: 'm4a4', name: 'M4A4', cat: 'rifle', slot: 'primary', price: 3100, damage: 33, headshotMult: 4.0, fireRate: 666, clipSize: 30, maxAmmo: 90, reloadTime: 2.6, spread: 0.018, color: 0x273746, length: 1.05, desc: 'Aniq va barqaror CT asosiy miltig\'i.' },
-      { id: 'm4a1s', name: 'M4A1-S', cat: 'rifle', slot: 'primary', price: 2900, damage: 38, headshotMult: 4.1, fireRate: 600, clipSize: 25, maxAmmo: 75, reloadTime: 2.6, spread: 0.014, color: 0x1b2631, length: 1.2, desc: 'O\'chirgichli o\'ta aniq shturmovik.' },
-      { id: 'aug', name: 'AUG', cat: 'rifle', slot: 'primary', price: 3300, damage: 28, headshotMult: 4.0, fireRate: 666, clipSize: 30, maxAmmo: 90, reloadTime: 3.0, spread: 0.014, color: 0x415b76, length: 1.0, hasScope: true, desc: 'Optik nishonga ega zamonaviy avtomat.' },
-
-      // --- SNIPERS & HEAVY (3 ta) ---
-      { id: 'sg553', name: 'SG 553', cat: 'sniper', slot: 'primary', price: 3000, damage: 30, headshotMult: 4.0, fireRate: 545, clipSize: 30, maxAmmo: 90, reloadTime: 3.1, spread: 0.016, color: 0x34495e, length: 1.05, hasScope: true, desc: 'Optikali qudratli T shturmovigi.' },
-      { id: 'ssg08', name: 'SSG 08 (Scout)', cat: 'sniper', slot: 'primary', price: 1700, damage: 88, headshotMult: 4.5, fireRate: 48, clipSize: 10, maxAmmo: 90, reloadTime: 2.8, spread: 0.005, color: 0x566573, length: 1.25, hasScope: true, desc: 'Yengil, tezkor snayper miltig\'i.' },
-      { id: 'awp', name: 'AWP', cat: 'sniper', slot: 'primary', price: 4750, damage: 115, headshotMult: 4.8, fireRate: 41, clipSize: 10, maxAmmo: 30, reloadTime: 3.4, spread: 0.002, color: 0x2d572c, length: 1.4, hasScope: true, isHeavySniper: true, desc: 'Bir o\'q bilan hal qiluvchi qudratli AWP.' },
-
-      // --- ZIRH VA ANJOM (2 ta) ---
-      { id: 'kevlar', name: 'Kevlar Zirh', cat: 'gear', slot: 'gear', price: 650, armor: 100, desc: 'Zararni 50% ga kamaytiruvchi zirh.' },
-      { id: 'medkit', name: 'Medkit (Shifo)', cat: 'gear', slot: 'gear', price: 500, heal: 60, desc: 'Salomatlikni +60 ga to\'ldiradi.' }
-    ];
-
-    /* =========================================================================
-       O'YIN ASOSIY HOLATI VA SOZLAMALARI
-       ========================================================================= */
-    const GameState = {
-      playerTeam: 'CT',
-      formatTeamSize: 8, // 8 ga 8 (jami 16 kishi)
-      roundNumber: 1,
-      roundTime: 120, // 2 daqiqa
-      roundTimerInterval: null,
-      roundActive: false,
-      scoreCT: 0,
-      scoreT: 0,
-
-      // O'yinchi holati
-      player: {
-        hp: 100,
-        maxHp: 100,
-        armor: 100,
-        coins: parseInt(localStorage.getItem('cs_elite_coins')) || 1000,
-        kills: 0,
-        deaths: 0,
-        team: 'CT',
-        name: 'Player',
-        primary: null,
-        secondary: null,
-        currentSlot: 'primary',
-        isScoped: false,
-        isReloading: false,
-        ammoState: {} // { [weaponId]: { clip: X, res: Y } }
-      },
-
-      // Botlar va ishtirokchilar ro'yxati
-      participants: [],
-
-      saveCoins() {
-        localStorage.setItem('cs_elite_coins', this.player.coins);
-      },
-      addCoins(amount, reason = '') {
-        this.player.coins += amount;
-        this.saveCoins();
-        updateHUDCoins(amount);
-      }
-    };
-
-    /* =========================================================================
-       THREE.JS 3D SCENE VA DUNYO YARATISH
-       ========================================================================= */
-    let scene, camera, renderer;
-    let mapColliders = [];
-    let bullets = [];
-    let particles = [];
-    let bots = [];
-    let playerGunMesh = null;
-    let muzzleLight = null;
-
-    // Harakat va boshqaruv
-    const moveState = { forward: false, backward: false, left: false, right: false, jump: false };
-    const playerPhysics = {
-      velocity: new THREE.Vector3(),
-      canJump: false,
-      speed: 14,
-      gravity: 32,
-      height: 1.7
-    };
-
-    let clock = new THREE.Clock();
-    let isPointerLocked = false;
-    let cameraPitch = 0;
-    let cameraYaw = 0;
-
-    function initThreeEngine() {
-      const canvas = document.getElementById('webgl-canvas');
-      renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-      scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xbdd6e6); // Ochiq cho'l osmoni
-      scene.fog = new THREE.FogExp2(0xbdd6e6, 0.015);
-
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 300);
-      camera.position.set(0, playerPhysics.height, 0);
-
-      // Yoritish
-      const ambientLight = new THREE.AmbientLight(0xfff4e6, 0.65);
-      scene.add(ambientLight);
-
-      const sunLight = new THREE.DirectionalLight(0xfffaed, 0.9);
-      sunLight.position.set(40, 80, 50);
-      sunLight.castShadow = true;
-      sunLight.shadow.mapSize.width = 2048;
-      sunLight.shadow.mapSize.height = 2048;
-      sunLight.shadow.camera.near = 10;
-      sunLight.shadow.camera.far = 250;
-      const d = 60;
-      sunLight.shadow.camera.left = -d;
-      sunLight.shadow.camera.right = d;
-      sunLight.shadow.camera.top = d;
-      sunLight.shadow.camera.bottom = -d;
-      scene.add(sunLight);
-
-      // Qurol muzzle flash chirog'i
-      muzzleLight = new THREE.PointLight(0xffaa22, 0, 15);
-      camera.add(muzzleLight);
-      scene.add(camera);
-
-      // Xaritani qurish (CS de_dust2 uslubida)
-      buildDustMap();
-
-      window.addEventListener('resize', onWindowResize);
-    }
-
-    function onWindowResize() {
-      if (!camera || !renderer) return;
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    /* =========================================================================
-       CS ARENA XARITASI (DE_DUST2 STYLE)
-       ========================================================================= */
-    function buildDustMap() {
-      mapColliders = [];
-
-      // Procedural tekstura yaratish (Qum va g'isht naqshlari)
-      function createDustTexture(colorHex, lineHex) {
-        const c = document.createElement('canvas');
-        c.width = 128;
-        c.height = 128;
-        const ctx = c.getContext('2d');
-        ctx.fillStyle = colorHex;
-        ctx.fillRect(0, 0, 128, 128);
-        ctx.strokeStyle = lineHex;
-        ctx.lineWidth = 4;
-        ctx.strokeRect(2, 2, 124, 124);
-        ctx.beginPath();
-        ctx.moveTo(0, 64); ctx.lineTo(128, 64);
-        ctx.moveTo(64, 0); ctx.lineTo(64, 128);
-        ctx.stroke();
-        const tex = new THREE.CanvasTexture(c);
-        tex.wrapS = THREE.RepeatWrapping;
-        tex.wrapT = THREE.RepeatWrapping;
-        return tex;
-      }
-
-      const floorTex = createDustTexture('#c8a876', '#b39260');
-      floorTex.repeat.set(30, 30);
-      const floorMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.9 });
-
-      const wallTex = createDustTexture('#dfc299', '#ba9c74');
-      wallTex.repeat.set(2, 2);
-      const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.8 });
-
-      const crateTex = createDustTexture('#8a6642', '#5c4126');
-      const crateMat = new THREE.MeshStandardMaterial({ map: crateTex, roughness: 0.7 });
-
-      // Asosiy pol (Ground)
-      const floorGeo = new THREE.PlaneGeometry(140, 140);
-      const floorMesh = new THREE.Mesh(floorGeo, floorMat);
-      floorMesh.rotation.x = -Math.PI / 2;
-      floorMesh.receiveShadow = true;
-      scene.add(floorMesh);
-
-      // Yordamchi quti yaratuvchi
-      function addObstacle(x, y, z, w, h, d, mat = wallMat) {
-        const geo = new THREE.BoxGeometry(w, h, d);
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.set(x, y + h / 2, z);
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        scene.add(mesh);
-
-        // Bounding Box to'siq sifatida
-        mesh.updateMatrixWorld();
-        const box = new THREE.Box3().setFromObject(mesh);
-        mapColliders.push(box);
-        return mesh;
-      }
-
-      // Tashqi chegaralovchi devorlar (Baland devorlar)
-      const mapW = 120, mapD = 120, wallH = 10, thick = 4;
-      addObstacle(0, 0, -mapD / 2, mapW, wallH, thick); // Shimol
-      addObstacle(0, 0, mapD / 2, mapW, wallH, thick);  // Janub
-      addObstacle(-mapW / 2, 0, 0, thick, wallH, mapD); // G'arb
-      addObstacle(mapW / 2, 0, 0, thick, wallH, mapD);  // Sharq
-
-      // Mid Yo'lagi va devorlar
-      addObstacle(-15, 0, -10, 6, 6, 40);
-      addObstacle(15, 0, -10, 6, 6, 40);
-
-      // A Site maydoni (Platforma va qutilar)
-      addObstacle(35, 0, -35, 20, 2, 20); // A sayt podium
-      addObstacle(35, 2, -35, 3.5, 3.5, 3.5, crateMat);
-      addObstacle(40, 2, -32, 3, 3, 3, crateMat);
-      addObstacle(30, 2, -38, 3, 3, 3, crateMat);
-
-      // B Site maydoni
-      addObstacle(-35, 0, -35, 22, 2.5, 22);
-      addObstacle(-35, 2.5, -35, 4, 4, 4, crateMat);
-      addObstacle(-30, 2.5, -38, 3.5, 3.5, 3.5, crateMat);
-
-      // Xarita bo'ylab qutilar (Cover/Boshpana)
-      const crateCoords = [
-        [0, 0, 10, 4, 3, 4],
-        [-6, 0, -8, 3, 3, 3],
-        [8, 0, -5, 3, 3, 3],
-        [-25, 0, 15, 5, 4, 4],
-        [25, 0, 15, 5, 4, 4],
-        [-20, 0, -10, 4, 3, 6],
-        [20, 0, -10, 4, 3, 6],
-        [-38, 0, 5, 4, 3.5, 4],
-        [38, 0, 5, 4, 3.5, 4],
-        [-5, 0, 35, 6, 3, 4],
-        [5, 0, 35, 6, 3, 4]
-      ];
-      crateCoords.forEach(c => addObstacle(c[0], c[1], c[2], c[3], c[4], c[5], crateMat));
-
-      // Spawn nuqtalari
-      // CT Spawn: Janubiy tomon (z = 45)
-      // T Spawn: Shimoliy tomon (z = -45)
-    }
-
-    /* =========================================================================
-       O'YINCHINING 3D QUROL MODELI (PROTSEDURALI DETALLANGAN WEAPON MESH)
-       ========================================================================= */
-    function updatePlayerGunMesh() {
-      if (playerGunMesh) {
-        camera.remove(playerGunMesh);
-      }
-
-      const activeWeapon = getActiveWeapon();
-      if (!activeWeapon) return;
-
-      const gunGroup = new THREE.Group();
-
-      // Qurol tanasi (Receiver)
-      const bodyGeo = new THREE.BoxGeometry(0.08, 0.12, activeWeapon.length * 0.6);
-      const bodyMat = new THREE.MeshStandardMaterial({
-        color: activeWeapon.color,
-        roughness: 0.35,
-        metalness: 0.8
-      });
-      const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-      bodyMesh.castShadow = true;
-      gunGroup.add(bodyMesh);
-
-      // Qurol stvoli (Barrel)
-      const barrelGeo = new THREE.CylinderGeometry(0.02, 0.02, activeWeapon.length * 0.5, 8);
-      const barrelMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.2 });
-      const barrelMesh = new THREE.Mesh(barrelGeo, barrelMat);
-      barrelMesh.rotation.x = Math.PI / 2;
-      barrelMesh.position.set(0, 0.03, -activeWeapon.length * 0.45);
-      gunGroup.add(barrelMesh);
-
-      // Dasta (Handle / Grip)
-      const gripGeo = new THREE.BoxGeometry(0.06, 0.16, 0.07);
-      const gripMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 });
-      const gripMesh = new THREE.Mesh(gripGeo, gripMat);
-      gripMesh.rotation.x = -0.25;
-      gripMesh.position.set(0, -0.1, 0.05);
-      gunGroup.add(gripMesh);
-
-      // Magazin (Clip)
-      const clipGeo = new THREE.BoxGeometry(0.05, 0.2, 0.08);
-      const clipMesh = new THREE.Mesh(clipGeo, gripMat);
-      clipMesh.position.set(0, -0.12, -0.05);
-      gunGroup.add(clipMesh);
-
-      // Agar optika/Scope bo'lsa (AWP, Scout, AUG)
-      if (activeWeapon.hasScope) {
-        const scopeGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.35, 12);
-        const scopeMesh = new THREE.Mesh(scopeGeo, barrelMat);
-        scopeMesh.rotation.x = Math.PI / 2;
-        scopeMesh.position.set(0, 0.09, -0.05);
-        gunGroup.add(scopeMesh);
-      }
-
-      // Qurolni o'yinchining o'ng qo'li holatiga qo'yish
-      gunGroup.position.set(0.24, -0.22, -0.42);
-      camera.add(gunGroup);
-      playerGunMesh = gunGroup;
-      muzzleLight.position.set(0.24, -0.15, -0.42 - activeWeapon.length * 0.6);
-    }
-
-    function getActiveWeapon() {
-      const slot = GameState.player.currentSlot;
-      const weaponId = slot === 'primary' ? GameState.player.primary : GameState.player.secondary;
-      if (!weaponId) return WEAPONS_DATABASE.find(w => w.id === 'glock'); // Default
-      return WEAPONS_DATABASE.find(w => w.id === weaponId);
-    }
-
-    /* =========================================================================
-       8v8 ISHTIROKCHILAR VA BOTLAR TIZIMI (BOT AI)
-       ========================================================================= */
-    const BOT_NAMES = [
-      'Gabe', 'S1mple', 'ZywOo', 'NiKo', 'Device', 'Fallen', 'Shroud', 'Tarik',
-      'Coldzera', 'KennyS', 'Olofmeister', 'Flusha', 'GeT_RiGhT', 'Forest', 'PashaBiceps', 'Stewie2K'
-    ];
-
-    function createBot3DMesh(team) {
-      const group = new THREE.Group();
-
-      const bodyColor = team === 'CT' ? 0x1d4ed8 : 0xb91c1c; // CT: Blue, T: Red
-      const skinColor = 0xdeb887;
-
-      // Gavda (Torso)
-      const torsoGeo = new THREE.BoxGeometry(0.6, 0.8, 0.35);
-      const torsoMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.6 });
-      const torsoMesh = new THREE.Mesh(torsoGeo, torsoMat);
-      torsoMesh.position.y = 1.0;
-      torsoMesh.castShadow = true;
-      group.add(torsoMesh);
-
-      // Bosh (Head) - Headshot nishoni
-      const headGeo = new THREE.BoxGeometry(0.35, 0.35, 0.35);
-      const headMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.5 });
-      const headMesh = new THREE.Mesh(headGeo, headMat);
-      headMesh.position.y = 1.6;
-      headMesh.castShadow = true;
-      headMesh.name = 'head';
-      group.add(headMesh);
-
-      // Shlem yoki Niqob
-      const helmetGeo = new THREE.BoxGeometry(0.38, 0.18, 0.38);
-      const helmetMat = new THREE.MeshStandardMaterial({ color: team === 'CT' ? 0x0f172a : 0x451a03 });
-      const helmetMesh = new THREE.Mesh(helmetGeo, helmetMat);
-      helmetMesh.position.y = 1.72;
-      group.add(helmetMesh);
-
-      // Oyoqlar
-      const legGeo = new THREE.BoxGeometry(0.24, 0.6, 0.24);
-      const legMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
-      const leftLeg = new THREE.Mesh(legGeo, legMat);
-      leftLeg.position.set(-0.16, 0.3, 0);
-      leftLeg.castShadow = true;
-      group.add(leftLeg);
-
-      const rightLeg = new THREE.Mesh(legGeo, legMat);
-      rightLeg.position.set(0.16, 0.3, 0);
-      rightLeg.castShadow = true;
-      group.add(rightLeg);
-
-      // Bot quroli (Visual)
-      const gunGeo = new THREE.BoxGeometry(0.1, 0.1, 0.7);
-      const gunMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8 });
-      const gunMesh = new THREE.Mesh(gunGeo, gunMat);
-      gunMesh.position.set(0.25, 0.9, -0.35);
-      group.add(gunMesh);
-
-      return group;
-    }
-
-    function initParticipants() {
-      // Mavjud botlarni tozalash
-      bots.forEach(b => {
-        if (b.mesh) scene.remove(b.mesh);
-      });
-      bots = [];
-      GameState.participants = [];
-
-      const teamSize = GameState.formatTeamSize; // 2, 4 yoki 8
-      let botNameIndex = 0;
-
-      // 1. O'yinchi
-      GameState.player.team = GameState.playerTeam;
-      GameState.player.hp = 100;
-      GameState.player.armor = 100;
-      GameState.participants.push({
-        id: 'player',
-        name: 'Player (Siz)',
-        isPlayer: true,
-        team: GameState.player.team,
-        hp: 100,
-        armor: 100,
-        kills: GameState.player.kills,
-        deaths: GameState.player.deaths,
-        coins: GameState.player.coins,
-        isDead: false
-      });
-
-      // 2. CT va T jamoalariga botlarni to'ldirish
-      const totalParticipants = teamSize * 2;
-      for (let i = 0; i < totalParticipants; i++) {
-        const team = i < teamSize ? 'CT' : 'T';
-
-        // Agar bu o'yinchi bo'lsa, o'tkazib yuborish
-        if (team === GameState.player.team && i === 0) continue;
-
-        const name = BOT_NAMES[botNameIndex % BOT_NAMES.length] + ` [${team}]`;
-        botNameIndex++;
-
-        // Bot quroli
-        const randomWeapon = WEAPONS_DATABASE[Math.floor(Math.random() * 18)]; // 20 tadan biri
-
-        const botMesh = createBot3DMesh(team);
-        scene.add(botMesh);
-
-        // Spawn koordinatalari
-        const spawnZ = team === 'CT' ? (35 + Math.random() * 12) : (-35 - Math.random() * 12);
-        const spawnX = (Math.random() - 0.5) * 50;
-        botMesh.position.set(spawnX, 0, spawnZ);
-
-        const botObj = {
-          id: 'bot_' + i,
-          name: name,
-          isPlayer: false,
-          team: team,
-          hp: 100,
-          armor: 80,
-          kills: 0,
-          deaths: 0,
-          coins: 1000,
-          isDead: false,
-          weapon: randomWeapon,
-          mesh: botMesh,
-          targetPos: new THREE.Vector3(spawnX, 0, spawnZ),
-          moveSpeed: 4.5 + Math.random() * 2.5,
-          nextFireTime: 0,
-          aiTimer: 0
-        };
-
-        bots.push(botObj);
-        GameState.participants.push(botObj);
-      }
-
-      // O'yinchini spawn qilish
-      spawnPlayer();
-      renderScoreboard();
-    }
-
-    function spawnPlayer() {
-      GameState.player.hp = 100;
-      GameState.player.armor = 100;
-      GameState.player.isReloading = false;
-      GameState.player.isScoped = false;
-
-      // Agar o'yinchida hali qurol bo'lmasa, boshlang'ich berish
-      if (!GameState.player.primary) GameState.player.primary = 'ak47';
-      if (!GameState.player.secondary) GameState.player.secondary = 'glock';
-
-      initWeaponAmmo(GameState.player.primary);
-      initWeaponAmmo(GameState.player.secondary);
-
-      const spawnZ = GameState.player.team === 'CT' ? 45 : -45;
-      const spawnX = (Math.random() - 0.5) * 20;
-      camera.position.set(spawnX, playerPhysics.height, spawnZ);
-      cameraYaw = GameState.player.team === 'CT' ? Math.PI : 0;
-      cameraPitch = 0;
-      applyCameraRotation();
-
-      updatePlayerGunMesh();
-      updateHUD();
-    }
-
-    function initWeaponAmmo(weaponId) {
-      if (!weaponId) return;
-      if (!GameState.player.ammoState[weaponId]) {
-        const w = WEAPONS_DATABASE.find(x => x.id === weaponId);
-        if (w) {
-          GameState.player.ammoState[weaponId] = {
-            clip: w.clipSize,
-            reserve: w.maxAmmo
-          };
-        }
-      }
-    }
-
-    /* =========================================================================
-       BOT AI LOGIKASI (PATROL, HUNT, TARGETING & SHOOTING)
-       ========================================================================= */
-    function updateBotsAI(delta) {
-      if (!GameState.roundActive) return;
-
-      const now = performance.now();
-
-      bots.forEach(bot => {
-        if (bot.isDead) return;
-
-        bot.aiTimer -= delta;
-
-        // 1. Yangi harakat nuqtasi tanlash (Patrol / Hunt)
-        if (bot.aiTimer <= 0) {
-          bot.aiTimer = 1.5 + Math.random() * 2;
-          // Dushman tomon siljish
-          const targetZ = bot.team === 'CT' ? (-20 - Math.random() * 30) : (20 + Math.random() * 30);
-          const targetX = (Math.random() - 0.5) * 60;
-          bot.targetPos.set(targetX, 0, targetZ);
-        }
-
-        // 2. Eng yaqin dushmanni qidirish (O'yinchi yoki dushman bot)
-        let closestEnemy = null;
-        let minDist = 70; // Ko'rish masofasi
-
-        // O'yinchini tekshirish
-        if (GameState.player.team !== bot.team && GameState.player.hp > 0) {
-          const d = bot.mesh.position.distanceTo(camera.position);
-          if (d < minDist) {
-            minDist = d;
-            closestEnemy = { isPlayer: true, pos: camera.position };
-          }
-        }
-
-        // Boshqa dushman botlarni tekshirish
-        bots.forEach(other => {
-          if (other.team !== bot.team && !other.isDead) {
-            const d = bot.mesh.position.distanceTo(other.mesh.position);
-            if (d < minDist) {
-              minDist = d;
-              closestEnemy = { isPlayer: false, bot: other, pos: other.mesh.position };
-            }
-          }
-        });
-
-        // 3. Agar dushman topilsa - unga qarash va o'q uzish!
-        if (closestEnemy) {
-          const enemyPos = closestEnemy.pos;
-          const lookDir = new THREE.Vector3().subVectors(enemyPos, bot.mesh.position);
-          bot.mesh.rotation.y = Math.atan2(lookDir.x, lookDir.z);
-
-          // Otish tezligi bo'yicha o't ochish
-          if (now > bot.nextFireTime) {
-            bot.nextFireTime = now + (60000 / bot.weapon.fireRate) + (Math.random() * 80);
-
-            // Bot o'qi trayektoriyasi va aniqligi
-            const shootDir = lookDir.clone().normalize();
-            // Xatolik (Spread)
-            shootDir.x += (Math.random() - 0.5) * 0.08;
-            shootDir.y += (Math.random() - 0.5) * 0.08;
-            shootDir.z += (Math.random() - 0.5) * 0.08;
-
-            spawnBullet(bot.mesh.position.clone().add(new THREE.Vector3(0, 1.2, 0)), shootDir, bot, bot.weapon);
-          }
-        } else {
-          // Dushman yo'q bo'lsa harakatlanish
-          const moveDir = new THREE.Vector3().subVectors(bot.targetPos, bot.mesh.position);
-          moveDir.y = 0;
-          if (moveDir.length() > 1) {
-            moveDir.normalize();
-            bot.mesh.position.addScaledVector(moveDir, bot.moveSpeed * delta);
-            bot.mesh.rotation.y = Math.atan2(moveDir.x, moveDir.z);
-          }
-        }
-      });
-    }
-
-    /* =========================================================================
-       O'Q OTISH (BALLISTICS, DAMAGE, RECOIL VA HITMARKER)
-       ========================================================================= */
-    let lastPlayerShotTime = 0;
-
-    function playerShoot() {
-      if (!GameState.roundActive || GameState.player.hp <= 0 || GameState.player.isReloading) return;
-
-      const activeWeapon = getActiveWeapon();
-      const ammo = GameState.player.ammoState[activeWeapon.id];
-      if (!ammo || ammo.clip <= 0) {
-        // O'q tugadi -> Reload
-        reloadWeapon();
-        return;
-      }
-
-      const now = performance.now();
-      const fireInterval = 60000 / activeWeapon.fireRate;
-      if (now - lastPlayerShotTime < fireInterval) return;
-
-      lastPlayerShotTime = now;
-      ammo.clip--;
-      updateHUD();
-
-      // Ovoz va Muzzle flash
-      SoundEngine.playShot(activeWeapon.cat);
-      showMuzzleFlash();
-
-      // Recoil animatsiyasi
-      animateRecoil(activeWeapon);
-
-      // O'q yo'nalishi (Kameradan oldinga + spread)
-      const dir = new THREE.Vector3();
-      camera.getWorldDirection(dir);
-
-      let spread = activeWeapon.spread;
-      if (GameState.player.isScoped) spread *= 0.1; // Scope aniqlikni 10 barobar oshiradi!
-
-      dir.x += (Math.random() - 0.5) * spread;
-      dir.y += (Math.random() - 0.5) * spread;
-      dir.z += (Math.random() - 0.5) * spread;
-      dir.normalize();
-
-      // O'qni chiqarish
-      spawnBullet(camera.position.clone(), dir, { isPlayer: true, name: 'Player', team: GameState.player.team }, activeWeapon);
-
-      // Agar o'q qolmagan bo'lsa avtomatik reload
-      if (ammo.clip <= 0) {
-        reloadWeapon();
-      }
-    }
-
-    function spawnBullet(startPos, direction, shooter, weapon) {
-      bullets.push({
-        pos: startPos.clone(),
-        dir: direction.clone(),
-        speed: 160,
-        life: 1.5,
-        shooter: shooter,
-        weapon: weapon
-      });
-    }
-
-    function showMuzzleFlash() {
-      if (!muzzleLight) return;
-      muzzleLight.intensity = 4.0;
-      setTimeout(() => {
-        if (muzzleLight) muzzleLight.intensity = 0;
-      }, 50);
-
-      // Crosshair recoil animatsiyasi
-      const ch = document.getElementById('crosshair');
-      ch.classList.add('shooting');
-      setTimeout(() => ch.classList.remove('shooting'), 90);
-    }
-
-    function animateRecoil(weapon) {
-      if (playerGunMesh) {
-        playerGunMesh.position.z += 0.08;
-        playerGunMesh.rotation.x += 0.1;
-        setTimeout(() => {
-          if (playerGunMesh) {
-            playerGunMesh.position.z = -0.42;
-            playerGunMesh.rotation.x = 0;
-          }
-        }, 80);
-      }
-      // Kamera silkinishi (Kickback)
-      cameraPitch += 0.008;
-      applyCameraRotation();
-    }
-
-    /* O'qlarni va to'qnashuvlarni har freymda hisoblash */
-    function updateBullets(delta) {
-      for (let i = bullets.length - 1; i >= 0; i--) {
-        const b = bullets[i];
-        b.life -= delta;
-
-        const prevPos = b.pos.clone();
-        b.pos.addScaledVector(b.dir, b.speed * delta);
-
-        // Raycasting orqali to'qnashuvni aniqlash
-        const ray = new THREE.Ray(prevPos, b.dir);
-        const distTravelled = prevPos.distanceTo(b.pos);
-
-        let hitSomething = false;
-
-        // 1. O'yinchiga tekkanini tekshirish (Agar bot o'q uzgan bo'lsa)
-        if (!b.shooter.isPlayer && b.shooter.team !== GameState.player.team && GameState.player.hp > 0) {
-          const playerBox = new THREE.Box3(
-            new THREE.Vector3(camera.position.x - 0.4, 0, camera.position.z - 0.4),
-            new THREE.Vector3(camera.position.x + 0.4, playerPhysics.height + 0.2, camera.position.z + 0.4)
-          );
-          if (playerBox.containsPoint(b.pos)) {
-            hitSomething = true;
-            applyDamageToPlayer(b.weapon.damage, b.shooter);
-          }
-        }
-
-        // 2. Botlarga tekkanini tekshirish
-        if (!hitSomething) {
-          for (let j = 0; j < bots.length; j++) {
-            const bot = bots[j];
-            if (bot.isDead || bot.team === b.shooter.team) continue;
-
-            const botPos = bot.mesh.position;
-            const distToBot = b.pos.distanceTo(botPos);
-
-            if (distToBot < 1.2) {
-              hitSomething = true;
-              // Headshot tekshirish (Balandlik 1.4 dan yuqori bo'lsa)
-              const isHeadshot = b.pos.y >= 1.35;
-              const dmg = b.weapon.damage * (isHeadshot ? b.weapon.headshotMult : 1.0);
-
-              applyDamageToBot(bot, dmg, isHeadshot, b.shooter, b.weapon);
-
-              // Agar o'yinchi otgan bo'lsa - Hitmarker ko'rsatish
-              if (b.shooter.isPlayer) {
-                showHitmarker(isHeadshot);
-                if (isHeadshot) SoundEngine.playHeadshot();
-                else SoundEngine.playHit();
-              }
-              break;
-            }
-          }
-        }
-
-        // 3. Devorlarga urilish
-        if (!hitSomething) {
-          for (let k = 0; k < mapColliders.length; k++) {
-            if (mapColliders[k].containsPoint(b.pos)) {
-              hitSomething = true;
-              createSparkParticle(b.pos);
-              break;
-            }
-          }
-        }
-
-        if (hitSomething || b.life <= 0) {
-          bullets.splice(i, 1);
-        }
-      }
-    }
-
-    function showHitmarker(isHeadshot) {
-      const hm = document.getElementById('hitmarker');
-      hm.classList.add('show');
-      setTimeout(() => hm.classList.remove('show'), 120);
-    }
-
-    function createSparkParticle(pos) {
-      // Devorga o'q tekkanda uchqun
-    }
-
-    /* =========================================================================
-       ZARAR (DAMAGE), O'LIM VA IQTISODIYOT (COINS / MONEY)
-       ========================================================================= */
-    function applyDamageToPlayer(damage, shooter) {
-      if (GameState.player.hp <= 0) return;
-
-      // Zirh himoyasi
-      let effectiveDmg = damage;
-      if (GameState.player.armor > 0) {
-        effectiveDmg *= 0.55; // 45% zararni yutadi
-        GameState.player.armor = Math.max(0, GameState.player.armor - damage * 0.3);
-      }
-
-      GameState.player.hp = Math.max(0, Math.round(GameState.player.hp - effectiveDmg));
-      updateHUD();
-
-      // Qonli ekran effekti
-      const overlay = document.getElementById('damage-overlay');
-      overlay.classList.add('hit');
-      setTimeout(() => overlay.classList.remove('hit'), 220);
-
-      if (GameState.player.hp <= 0) {
-        // O'yinchi o'ldi
-        GameState.player.deaths++;
-        addParticipantStats(shooter.id, 'kills', 1);
-        addParticipantStats('player', 'deaths', 1);
-
-        addKillfeedEntry(shooter.name, shooter.team, 'Player (Siz)', GameState.player.team, 'M4A4', false);
-        checkRoundEndCondition();
-      }
-    }
-
-    function applyDamageToBot(bot, damage, isHeadshot, shooter, weapon) {
-      if (bot.isDead) return;
-
-      bot.hp -= damage;
-
-      if (bot.hp <= 0) {
-        bot.isDead = true;
-        bot.deaths++;
-        scene.remove(bot.mesh);
-
-        // Kills hisoblash
-        if (shooter.isPlayer) {
-          GameState.player.kills++;
-          addParticipantStats('player', 'kills', 1);
-
-          // HAR BIR KILL UCHUN COIN BERILADI!
-          let rewardCoins = 300;
-          if (weapon.cat === 'smg') rewardCoins = 600; // CS da SMG kill $600
-          if (isHeadshot) rewardCoins += 150; // Headshot bonus!
-
-          GameState.addCoins(rewardCoins, 'Kill Reward');
-        } else {
-          addParticipantStats(shooter.id, 'kills', 1);
-        }
-
-        addParticipantStats(bot.id, 'deaths', 1);
-        addKillfeedEntry(shooter.name, shooter.team, bot.name, bot.team, weapon.name, isHeadshot);
-
-        renderScoreboard();
-        checkRoundEndCondition();
-      }
-    }
-
-    function addParticipantStats(id, key, val) {
-      const p = GameState.participants.find(x => x.id === id);
-      if (p) p[key] = (p[key] || 0) + val;
-    }
-
-    function addKillfeedEntry(killer, kTeam, victim, vTeam, weaponName, headshot) {
-      const feed = document.getElementById('killfeed');
-      const item = document.createElement('div');
-      item.className = `killfeed-item ${kTeam.toLowerCase()}-killer ${vTeam.toLowerCase()}-victim`;
-      item.innerHTML = `
-        <span class="killer-name">${killer}</span>
-        <span class="weapon-icon">${weaponName}</span>
-        ${headshot ? '<span class="headshot-badge">🎯 HS</span>' : ''}
-        <span class="victim-name">${victim}</span>
-      `;
-      feed.prepend(item);
-      setTimeout(() => {
-        item.style.opacity = '0';
-        setTimeout(() => item.remove(), 400);
-      }, 5000);
-    }
-
-    /* =========================================================================
-       RAUND BOSHQARUVI VA HAR RAUNDDA COIN BERILISHI
-       ========================================================================= */
-    function checkRoundEndCondition() {
-      if (!GameState.roundActive) return;
-
-      const ctAlive = GameState.participants.filter(p => p.team === 'CT' && (p.isPlayer ? GameState.player.hp > 0 : !p.isDead)).length;
-      const tAlive = GameState.participants.filter(p => p.team === 'T' && (p.isPlayer ? GameState.player.hp > 0 : !p.isDead)).length;
-
-      if (ctAlive === 0) {
-        endRound('T');
-      } else if (tAlive === 0) {
-        endRound('CT');
-      }
-    }
-
-    function endRound(winningTeam) {
-      GameState.roundActive = false;
-      clearInterval(GameState.roundTimerInterval);
-
-      if (winningTeam === 'CT') GameState.scoreCT++;
-      else GameState.scoreT++;
-
-      document.getElementById('score-ct').textContent = GameState.scoreCT;
-      document.getElementById('score-t').textContent = GameState.scoreT;
-      document.getElementById('sb-ct-score').textContent = GameState.scoreCT;
-      document.getElementById('sb-t-score').textContent = GameState.scoreT;
-
-      // Banner e'lon qilish
-      const announceBox = document.getElementById('center-announcement');
-      const announceText = document.getElementById('announce-text');
-      const announceSub = document.getElementById('announce-subtext');
-
-      announceText.textContent = winningTeam === 'CT' ? 'COUNTER-TERRORISTS WIN' : 'TERRORISTS WIN';
-      announceText.className = `announce-title ${winningTeam.toLowerCase()}`;
-
-      // COIN MUKOFOTI (Har o'yinda o'yinchilarga beriladigan pullar)
-      const isWinner = GameState.player.team === winningTeam;
-      const coinBonus = isWinner ? 3250 : 1400; // G'olib jamoaga $3250, yutqazganga $1400
-      GameState.addCoins(coinBonus, 'Round Bonus');
-
-      announceSub.textContent = `${isWinner ? 'G\'ALABA!' : 'MAG\'LUBIYAT!'} SIZGA +$${coinBonus.toLocaleString()} COIN BERILDI`;
-      announceBox.classList.add('show');
-
-      // 4 soniyadan so'ng keyingi raund
-      setTimeout(() => {
-        announceBox.classList.remove('show');
-        startNewRound();
-      }, 4500);
-    }
-
-    function startNewRound() {
-      GameState.roundNumber++;
-      GameState.roundTime = 120;
-      GameState.roundActive = true;
-
-      document.getElementById('round-state-text').textContent = `ROUND ${GameState.roundNumber}`;
-      SoundEngine.playRoundStart();
-
-      // Botlarni va o'yinchini qayta tiriltirish
-      initParticipants();
-
-      // Raund taymeri
-      clearInterval(GameState.roundTimerInterval);
-      GameState.roundTimerInterval = setInterval(() => {
-        if (!GameState.roundActive) return;
-        GameState.roundTime--;
-        const mins = Math.floor(GameState.roundTime / 60);
-        const secs = GameState.roundTime % 60;
-        document.getElementById('round-timer').textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-
-        if (GameState.roundTime <= 0) {
-          // Vaqt tugasa CT yutadi (CS qoidasi bo'yicha)
-          endRound('CT');
-        }
-      }, 1000);
-    }
-
-    /* =========================================================================
-       QUROLLAR VA BUY MENU (DO'KON) DASTURI
-       ========================================================================= */
-    function renderShop(category = 'all') {
-      const grid = document.getElementById('shop-weapons-grid');
-      grid.innerHTML = '';
-
-      const filtered = category === 'all'
-        ? WEAPONS_DATABASE
-        : WEAPONS_DATABASE.filter(w => w.cat === category);
-
-      filtered.forEach(weapon => {
-        const canAfford = GameState.player.coins >= weapon.price;
-        const isEquipped = (GameState.player.primary === weapon.id || GameState.player.secondary === weapon.id);
-
-        const card = document.createElement('div');
-        card.className = `weapon-buy-card ${canAfford ? '' : 'cant-afford'} ${isEquipped ? 'equipped' : ''}`;
-
-        // Parametrlar
-        let statsHTML = '';
-        if (weapon.damage) {
-          statsHTML = `
-            <div class="stat-row">
-              <span>Zarar (Damage)</span>
-              <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${Math.min(100, weapon.damage)}%"></div></div>
-            </div>
-            <div class="stat-row">
-              <span>Tezlik (RPM)</span>
-              <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${Math.min(100, (weapon.fireRate / 900) * 100)}%"></div></div>
-            </div>
-            <div class="stat-row">
-              <span>O'qlar</span>
-              <span>${weapon.clipSize} / ${weapon.maxAmmo}</span>
-            </div>
-          `;
-        } else if (weapon.armor) {
-          statsHTML = `<div class="stat-row"><span>Himoya</span><span>100% Armor</span></div>`;
-        } else if (weapon.heal) {
-          statsHTML = `<div class="stat-row"><span>Shifo</span><span>+60 HP</span></div>`;
-        }
-
-        card.innerHTML = `
-          <span class="w-badge-slot">${weapon.slot ? weapon.slot.toUpperCase() : 'GEAR'}</span>
-          <div class="w-header">
-            <div class="w-name">${weapon.name}</div>
-            <div class="w-type">${weapon.desc}</div>
-          </div>
-          <div class="w-stats">${statsHTML}</div>
-          <div class="w-footer">
-            <span class="w-price">$${weapon.price.toLocaleString()}</span>
-            <button class="w-buy-btn" ${canAfford ? '' : 'disabled'}>
-              ${isEquipped ? 'OLINGAN' : 'SOTIB OLISH'}
-            </button>
-          </div>
-        `;
-
-        const btn = card.querySelector('.w-buy-btn');
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          buyWeapon(weapon);
-        });
-
-        grid.appendChild(card);
-      });
-
-      document.getElementById('shop-wallet-amount').textContent = `$${GameState.player.coins.toLocaleString()}`;
-    }
-
-    function buyWeapon(weapon) {
-      if (GameState.player.coins < weapon.price) return;
-
-      GameState.player.coins -= weapon.price;
-      GameState.saveCoins();
-      SoundEngine.playBuy();
-
-      if (weapon.slot === 'primary') {
-        GameState.player.primary = weapon.id;
-        GameState.player.currentSlot = 'primary';
-        initWeaponAmmo(weapon.id);
-      } else if (weapon.slot === 'secondary') {
-        GameState.player.secondary = weapon.id;
-        GameState.player.currentSlot = 'secondary';
-        initWeaponAmmo(weapon.id);
-      } else if (weapon.id === 'kevlar') {
-        GameState.player.armor = 100;
-      } else if (weapon.id === 'medkit') {
-        GameState.player.hp = Math.min(100, GameState.player.hp + weapon.heal);
-      }
-
-      updatePlayerGunMesh();
-      updateHUD();
-      renderShop(document.querySelector('.cat-tab.active')?.dataset.cat || 'all');
-    }
-
-    function toggleBuyMenu(forceClose = false) {
-      const menu = document.getElementById('buy-menu');
-      const isCurrentlyOpen = menu.classList.contains('open');
-
-      if (forceClose || isCurrentlyOpen) {
-        menu.classList.remove('open');
-        if (isPointerLocked) document.body.requestPointerLock();
-      } else {
-        menu.classList.add('open');
-        document.exitPointerLock();
-        renderShop();
-      }
-    }
-
-    /* =========================================================================
-       RELOAD VA ZOOM (SCOPE) MEXANIKASI
-       ========================================================================= */
-    function reloadWeapon() {
-      if (GameState.player.isReloading) return;
-      const activeWeapon = getActiveWeapon();
-      const ammo = GameState.player.ammoState[activeWeapon.id];
-      if (!ammo || ammo.clip >= activeWeapon.clipSize || ammo.reserve <= 0) return;
-
-      GameState.player.isReloading = true;
-      document.getElementById('reload-prompt').classList.add('show');
-      SoundEngine.playReload();
-
-      setTimeout(() => {
-        const needed = activeWeapon.clipSize - ammo.clip;
-        const take = Math.min(needed, ammo.reserve);
-        ammo.clip += take;
-        ammo.reserve -= take;
-        GameState.player.isReloading = false;
-        document.getElementById('reload-prompt').classList.remove('show');
-        updateHUD();
-      }, activeWeapon.reloadTime * 1000);
-    }
-
-    function toggleScope(enable) {
-      const activeWeapon = getActiveWeapon();
-      const scopeOverlay = document.getElementById('sniper-scope');
-
-      if (!activeWeapon.hasScope) {
-        GameState.player.isScoped = false;
-        scopeOverlay.classList.remove('active');
-        camera.fov = 75;
-        camera.updateProjectionMatrix();
-        if (playerGunMesh) playerGunMesh.visible = true;
-        return;
-      }
-
-      if (enable === undefined) GameState.player.isScoped = !GameState.player.isScoped;
-      else GameState.player.isScoped = enable;
-
-      if (GameState.player.isScoped) {
-        scopeOverlay.classList.add('active');
-        camera.fov = activeWeapon.isHeavySniper ? 20 : 35; // Katta zoom!
-        if (playerGunMesh) playerGunMesh.visible = false;
-      } else {
-        scopeOverlay.classList.remove('active');
-        camera.fov = 75;
-        if (playerGunMesh) playerGunMesh.visible = true;
-      }
-      camera.updateProjectionMatrix();
-    }
-
-    /* =========================================================================
-       SCOREBOARD VA HUD YANGILASH
-       ========================================================================= */
-    function updateHUD() {
-      // HP va Armor
-      document.getElementById('hud-hp').textContent = GameState.player.hp;
-      document.getElementById('hud-armor').textContent = Math.round(GameState.player.armor);
-      const hpWrap = document.getElementById('vital-hp-wrap');
-      if (GameState.player.hp <= 25) hpWrap.classList.add('low');
-      else hpWrap.classList.remove('low');
-
-      // Coins
-      document.getElementById('hud-coins').textContent = `$${GameState.player.coins.toLocaleString()}`;
-
-      // Qurol va O'q
-      const weapon = getActiveWeapon();
-      document.getElementById('hud-weapon-name').textContent = weapon.name;
-      document.getElementById('hud-weapon-slot').textContent = GameState.player.currentSlot.toUpperCase();
-
-      const ammo = GameState.player.ammoState[weapon.id] || { clip: 0, reserve: 0 };
-      const curAmmoEl = document.getElementById('hud-ammo-cur');
-      curAmmoEl.textContent = ammo.clip;
-      document.getElementById('hud-ammo-res').textContent = ammo.reserve;
-
-      if (ammo.clip <= Math.ceil(weapon.clipSize * 0.25)) curAmmoEl.classList.add('low');
-      else curAmmoEl.classList.remove('low');
-    }
-
-    function updateHUDCoins(delta) {
-      const el = document.getElementById('coin-delta');
-      el.textContent = `+ $${delta.toLocaleString()}`;
-      el.classList.add('show');
-      updateHUD();
-      setTimeout(() => el.classList.remove('show'), 1500);
-    }
-
-    function renderScoreboard() {
-      const ctBody = document.getElementById('sb-ct-body');
-      const tBody = document.getElementById('sb-t-body');
-      ctBody.innerHTML = '';
-      tBody.innerHTML = '';
-
-      GameState.participants.sort((a, b) => (b.kills * 2 - b.deaths) - (a.kills * 2 - a.deaths));
-
-      GameState.participants.forEach(p => {
-        const isDead = p.isPlayer ? GameState.player.hp <= 0 : p.isDead;
-        const row = document.createElement('tr');
-        if (p.isPlayer) row.classList.add('is-player');
-        if (isDead) row.classList.add('is-dead');
-
-        row.innerHTML = `
-          <td>${p.name}</td>
-          <td>${p.kills || 0}</td>
-          <td>${p.deaths || 0}</td>
-          <td>$${(p.coins || 1000).toLocaleString()}</td>
-          <td>${isDead ? '💀 DEAD' : 'ALIVE'}</td>
-        `;
-
-        if (p.team === 'CT') ctBody.appendChild(row);
-        else tBody.appendChild(row);
-      });
-    }
-
-    /* Radar / Mini-xaritani chizish */
-    function drawRadar() {
-      const canvas = document.getElementById('radar-canvas');
-      const ctx = canvas.getContext('2d');
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const scale = 1.1; // metr -> pixel
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Radar to'ri
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 70, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height);
-      ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy);
-      ctx.stroke();
-
-      // O'yinchi pozitsiyasiga nisbatan botlarni chizish
-      const pX = camera.position.x;
-      const pZ = camera.position.z;
-
-      bots.forEach(bot => {
-        if (bot.isDead) return;
-        const dx = (bot.mesh.position.x - pX) * scale;
-        const dz = (bot.mesh.position.z - pZ) * scale;
-
-        const rx = cx + dx;
-        const ry = cy + dz;
-
-        if (Math.hypot(dx, dz) < 80) {
-          ctx.beginPath();
-          ctx.arc(rx, ry, 3.5, 0, Math.PI * 2);
-          ctx.fillStyle = bot.team === GameState.player.team ? '#3b82f6' : '#ef4444';
-          ctx.fill();
-        }
-      });
-
-      // Markazda o'yinchi (Yashil uchburchak / yo'nalish)
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(-cameraYaw);
-      ctx.fillStyle = '#22c55e';
-      ctx.beginPath();
-      ctx.moveTo(0, -6);
-      ctx.lineTo(4, 5);
-      ctx.lineTo(-4, 5);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    }
-
-    /* =========================================================================
-       O'YINCHI HARAKATI VA FIZIKA
-       ========================================================================= */
-    function applyCameraRotation() {
-      cameraPitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, cameraPitch));
-      camera.rotation.set(0, 0, 0);
-      camera.rotation.y = cameraYaw;
-      camera.rotation.x = cameraPitch;
-    }
-
-    function updatePlayerMovement(delta) {
-      if (GameState.player.hp <= 0) return;
-
-      // Gravitatsiya va tushish
-      playerPhysics.velocity.y -= playerPhysics.gravity * delta;
-
-      // WASD yo'nalishi
-      const moveVec = new THREE.Vector3();
-      if (moveState.forward) moveVec.z -= 1;
-      if (moveState.backward) moveVec.z += 1;
-      if (moveState.left) moveVec.x -= 1;
-      if (moveState.right) moveVec.x += 1;
-
-      if (moveVec.lengthSq() > 0) {
-        moveVec.normalize();
-        moveVec.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw);
-        playerPhysics.velocity.x = moveVec.x * playerPhysics.speed;
-        playerPhysics.velocity.z = moveVec.z * playerPhysics.speed;
-      } else {
-        playerPhysics.velocity.x *= 0.6;
-        playerPhysics.velocity.z *= 0.6;
-      }
-
-      // Xarita to'siqlari bilan to'qnashuvni hisoblash (AABB Collision)
-      const nextX = camera.position.x + playerPhysics.velocity.x * delta;
-      const nextZ = camera.position.z + playerPhysics.velocity.z * delta;
-
-      // X chegarasi
-      let collideX = false;
-      let collideZ = false;
-      const playerRadius = 0.5;
-
-      for (let box of mapColliders) {
-        if (nextX + playerRadius > box.min.x && nextX - playerRadius < box.max.x &&
-            camera.position.z + playerRadius > box.min.z && camera.position.z - playerRadius < box.max.z &&
-            camera.position.y > box.min.y && camera.position.y - playerPhysics.height < box.max.y) {
-          collideX = true;
-        }
-        if (camera.position.x + playerRadius > box.min.x && camera.position.x - playerRadius < box.max.x &&
-            nextZ + playerRadius > box.min.z && nextZ - playerRadius < box.max.z &&
-            camera.position.y > box.min.y && camera.position.y - playerPhysics.height < box.max.y) {
-          collideZ = true;
-        }
-      }
-
-      if (!collideX) camera.position.x = nextX;
-      if (!collideZ) camera.position.z = nextZ;
-
-      camera.position.y += playerPhysics.velocity.y * delta;
-
-      // Polga tegish
-      if (camera.position.y <= playerPhysics.height) {
-        camera.position.y = playerPhysics.height;
-        playerPhysics.velocity.y = 0;
-        playerPhysics.canJump = true;
-      }
-
-      // Qurol silkinishi (Bobbing)
-      if (playerGunMesh && (moveState.forward || moveState.backward || moveState.left || moveState.right)) {
-        const t = performance.now() * 0.008;
-        playerGunMesh.position.y = -0.22 + Math.sin(t) * 0.012;
-        playerGunMesh.position.x = 0.24 + Math.cos(t * 0.5) * 0.008;
-      }
-    }
-
-    /* =========================================================================
-       INPUT TINGLOVCHILARI (KLAVIATURA VA SICHQONCHA)
-       ========================================================================= */
-    function setupInputEvents() {
-      // Sichqoncha harakati (Pointer Lock)
-      document.addEventListener('mousemove', (e) => {
-        if (!isPointerLocked) return;
-        const sens = 0.0022;
-        cameraYaw -= e.movementX * sens;
-        cameraPitch -= e.movementY * sens;
-        applyCameraRotation();
-      });
-
-      // Pointer Lock o'zgarishi
-      document.addEventListener('pointerlockchange', () => {
-        isPointerLocked = (document.pointerLockElement === document.body);
-      });
-
-      // Sichqoncha tugmalari (Otish va Scope)
-      let isLMBDown = false;
-      let autoFireInterval = null;
-
-      window.addEventListener('mousedown', (e) => {
-        if (!isPointerLocked) return;
-        if (e.button === 0) {
-          // Chap tugma - Otish
-          isLMBDown = true;
-          playerShoot();
-          const activeWeapon = getActiveWeapon();
-          // Avtomatik qurollar uchun doimiy otish
-          if (activeWeapon.fireRate > 200 && !activeWeapon.isHeavySniper) {
-            clearInterval(autoFireInterval);
-            autoFireInterval = setInterval(() => {
-              if (isLMBDown) playerShoot();
-            }, 60000 / activeWeapon.fireRate);
-          }
-        } else if (e.button === 2) {
-          // O'ng tugma - Scope Zoom
-          e.preventDefault();
-          toggleScope();
-        }
-      });
-
-      window.addEventListener('mouseup', (e) => {
-        if (e.button === 0) {
-          isLMBDown = false;
-          clearInterval(autoFireInterval);
-        }
-      });
-
-      window.addEventListener('contextmenu', e => e.preventDefault());
-
-      // Klaviatura
-      window.addEventListener('keydown', (e) => {
-        if (e.code === 'KeyW') moveState.forward = true;
-        if (e.code === 'KeyS') moveState.backward = true;
-        if (e.code === 'KeyA') moveState.left = true;
-        if (e.code === 'KeyD') moveState.right = true;
-
-        if (e.code === 'Space' && playerPhysics.canJump) {
-          playerPhysics.velocity.y = 11;
-          playerPhysics.canJump = false;
-        }
-
-        if (e.code === 'KeyR') reloadWeapon();
-
-        // 1 - Asosiy, 2 - To'pponcha
-        if (e.code === 'Digit1') {
-          GameState.player.currentSlot = 'primary';
-          toggleScope(false);
-          updatePlayerGunMesh();
-          updateHUD();
-        }
-        if (e.code === 'Digit2') {
-          GameState.player.currentSlot = 'secondary';
-          toggleScope(false);
-          updatePlayerGunMesh();
-          updateHUD();
-        }
-
-        // B - Buy Menu
-        if (e.code === 'KeyB') {
-          toggleBuyMenu();
-        }
-
-        // TAB - Scoreboard
-        if (e.code === 'Tab') {
-          e.preventDefault();
-          renderScoreboard();
-          document.getElementById('scoreboard').classList.add('open');
-        }
-
-        // ESC - Pause Menu
-        if (e.code === 'Escape') {
-          const pauseMenu = document.getElementById('pause-menu');
-          const buyMenu = document.getElementById('buy-menu');
-          if (buyMenu.classList.contains('open')) {
-            toggleBuyMenu(true);
-          } else {
-            pauseMenu.classList.toggle('open');
-            if (pauseMenu.classList.contains('open')) document.exitPointerLock();
-            else if (isPointerLocked) document.body.requestPointerLock();
-          }
-        }
-      });
-
-      window.addEventListener('keyup', (e) => {
-        if (e.code === 'KeyW') moveState.forward = false;
-        if (e.code === 'KeyS') moveState.backward = false;
-        if (e.code === 'KeyA') moveState.left = false;
-        if (e.code === 'KeyD') moveState.right = false;
-
-        if (e.code === 'Tab') {
-          document.getElementById('scoreboard').classList.remove('open');
-        }
-      });
-
-      // Do'kon toifalari tugmalari
-      document.querySelectorAll('.cat-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-          document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          renderShop(tab.dataset.cat);
-        });
-      });
-
-      document.getElementById('btn-close-shop').addEventListener('click', () => toggleBuyMenu(true));
-
-      // Pauza menyusi tugmalari
-      document.getElementById('btn-resume').addEventListener('click', () => {
-        document.getElementById('pause-menu').classList.remove('open');
-        document.body.requestPointerLock();
-      });
-      document.getElementById('btn-shop-from-pause').addEventListener('click', () => {
-        document.getElementById('pause-menu').classList.remove('open');
-        toggleBuyMenu();
-      });
-      document.getElementById('btn-restart-match').addEventListener('click', () => {
-        location.reload();
-      });
-
-      // Lobby konfiguratsiyasi
-      document.querySelectorAll('#team-selector .pill-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('#team-selector .pill-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          GameState.playerTeam = btn.dataset.team;
-        });
-      });
-
-      document.querySelectorAll('#format-selector .pill-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('#format-selector .pill-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          GameState.formatTeamSize = parseInt(btn.dataset.format);
-          document.getElementById('sb-mode-title').textContent = `${btn.dataset.format} vs ${btn.dataset.format} TEAM DEATHMATCH`;
-        });
-      });
-
-      // O'yinni boshlash tugmasi
-      document.getElementById('btn-start-game').addEventListener('click', () => {
-        SoundEngine.init();
-        document.getElementById('lobby-screen').classList.add('hidden');
-        document.body.requestPointerLock();
-        startNewRound();
-      });
-    }
-
-    /* =========================================================================
-       ASOSIY O'YIN SIKLI (MAIN ANIMATION LOOP)
-       ========================================================================= */
-    function animate() {
-      requestAnimationFrame(animate);
-
-      const delta = Math.min(clock.getDelta(), 0.1);
-
-      updatePlayerMovement(delta);
-      updateBotsAI(delta);
-      updateBullets(delta);
-      drawRadar();
-
-      renderer.render(scene, camera);
-    }
-
-    // O'yinni ishga tushirish
-    window.addEventListener('DOMContentLoaded', () => {
-      initThreeEngine();
-      setupInputEvents();
-      animate();
-    });
-  </script>
+  <!-- Game Logic Script -->
+  <script src="game.js"></script>
 </body>
 </html>
