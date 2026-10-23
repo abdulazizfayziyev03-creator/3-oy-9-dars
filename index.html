@@ -3,235 +3,443 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0a0b10">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>GTA 1v1 Showdown - Multiplayer Open World City</title>
-  
-  <!-- CSS Stylesheet -->
+  <title>TURBO DRIFT 3D - Mashinalar Poygasi</title>
   <link rel="stylesheet" href="main.css">
-  
-  <!-- PeerJS for Realtime WebRTC 1v1 Multiplayer -->
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- Three.js 3D Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- PeerJS WebRTC kutubxonasi (12 kishilik multiplayer uchun) -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
 
-  <!-- Main Game Container -->
-  <div id="game-container">
-    <!-- Canvas for 2D Open World City Engine -->
-    <canvas id="gameCanvas"></canvas>
+  <!-- 3D O'yin Kanvasi -->
+  <div id="game-canvas-container">
+    <canvas id="game-canvas"></canvas>
+  </div>
 
-    <!-- IN-GAME HUD -->
-    <div id="hud">
-      <!-- Top Center Score Bar -->
-      <div class="hud-top-bar">
-        <div class="score-badge player1-score">
-          <span id="p1-hud-name">Siz</span>: <span id="score-p1">0</span>
-        </div>
-        <div class="vs-divider">VS</div>
-        <div class="score-badge player2-score">
-          <span id="p2-hud-name">Raqib</span>: <span id="score-p2">0</span>
-        </div>
-        <div class="target-kills">Maqsad: 5 ta o'ldirish</div>
-      </div>
+  <!-- Yuqori panel: Pul va Tezkor tugmalar -->
+  <div class="top-status-bar">
+    <div class="coin-badge" id="hud-coin-badge">
+      <span class="coin-icon">💰</span>
+      <span class="coin-amount" id="coin-display">1,000</span>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="btn-sound-toggle" title="Ovozni yoqish/o'chirish">🔊</button>
+      <button class="icon-btn" id="btn-touch-toggle" title="Mobil boshqaruvni yoqish/o'chirish">🎮</button>
+      <button class="icon-btn" id="btn-fullscreen" title="To'liq ekran">⛶</button>
+      <button class="icon-btn" id="btn-settings-open" title="Sozlamalar">⚙️</button>
+    </div>
+  </div>
 
-      <!-- Top Left: Player Status Bars -->
-      <div class="player-status-container">
-        <!-- Health Bar -->
-        <div class="status-bar-wrap">
-          <div class="status-bar-info">
-            <span>❤️ JON</span>
-            <span id="hud-health-val">100</span>
-          </div>
-          <div class="status-bar-bg">
-            <div id="hud-health-fill" class="status-bar-fill health-fill" style="width: 100%;"></div>
-          </div>
-        </div>
-
-        <!-- Armor Bar -->
-        <div class="status-bar-wrap">
-          <div class="status-bar-info">
-            <span>🛡️ ZIRH</span>
-            <span id="hud-armor-val">50</span>
-          </div>
-          <div class="status-bar-bg">
-            <div id="hud-armor-fill" class="status-bar-fill armor-fill" style="width: 50%;"></div>
-          </div>
-        </div>
-
-        <!-- Vehicle Health Bar (when inside car) -->
-        <div id="hud-car-wrap" class="status-bar-wrap" style="display: none;">
-          <div class="status-bar-info">
-            <span>🚗 MOSHINA</span>
-            <span id="hud-car-val">150</span>
-          </div>
-          <div class="status-bar-bg">
-            <div id="hud-car-fill" class="status-bar-fill car-health-fill" style="width: 100%;"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Top Right: Weapon Info & Minimap -->
-      <div class="top-right-hud">
-        <div class="weapon-box">
-          <div id="hud-weapon-icon" class="weapon-icon-disp">🔫</div>
-          <div class="weapon-details">
-            <span id="hud-weapon-name" class="weapon-name">Pistol 9mm</span>
-            <span id="hud-ammo-val" class="weapon-ammo">60</span>
-          </div>
-        </div>
-
-        <!-- Radar Minimap -->
-        <div class="minimap-container">
-          <canvas id="minimapCanvas" width="140" height="140"></canvas>
-        </div>
-      </div>
-
-      <!-- Top Utility Bar (Audio & Fullscreen) -->
-      <div class="utility-bar">
-        <button id="btn-fullscreen" class="icon-btn" title="To'liq ekran">⛶</button>
-        <button id="btn-mute" class="icon-btn" title="Ovoz yoqish/o'chirish">🔊</button>
-      </div>
-
-      <!-- Realtime Killfeed & Event Notifications -->
-      <div id="killfeed" class="killfeed"></div>
-
-      <!-- In-Game Action Helper Tooltip -->
-      <div id="action-tip" class="action-tip">🚗 Moshinaga minish: [F]</div>
-
-      <!-- Mobile Orientation Warning (Shown on mobile portrait) -->
-      <div class="landscape-hint">🔄 Yaxshiroq tajriba uchun telefonni yonboshga burang!</div>
+  <!-- ASOSIY MENYU EKRANI -->
+  <div id="main-menu-overlay" class="screen-overlay">
+    <div class="game-logo">
+      <h1 class="game-title">TURBO DRIFT 3D</h1>
+      <p class="game-subtitle">SUPER POYGA & MULTIPLAYER (12 O'YINCHI)</p>
     </div>
 
-    <!-- MOBILE TOUCH CONTROLS OVERLAY -->
-    <div id="mobile-controls">
-      <!-- Left Virtual Joystick Zone (Movement & Steering) -->
-      <div id="joystick-zone" class="joystick-zone">
-        <div class="joystick-base">
-          <div id="joystick-thumb" class="joystick-thumb"></div>
-        </div>
-      </div>
-
-      <!-- Right Touch Action Cluster -->
-      <div class="action-cluster">
-        <!-- Top Action Buttons Row -->
-        <div class="action-row">
-          <button id="btn-touch-car" class="touch-btn car-btn" title="Moshina">
-            🚗
-            <span class="touch-btn-label">Moshina</span>
-          </button>
-          <button id="btn-touch-weapon" class="touch-btn" title="Qurol almashtirish">
-            🔄
-            <span class="touch-btn-label">Qurol</span>
-          </button>
-          <button id="btn-touch-sprint" class="touch-btn" title="Yugurish">
-            ⚡
-            <span class="touch-btn-label">Sprint</span>
-          </button>
-        </div>
-
-        <!-- Main Shoot / Attack Button -->
-        <div class="action-row">
-          <button id="btn-touch-horn" class="touch-btn" title="Signal">
-            🎺
-            <span class="touch-btn-label">Signal</span>
-          </button>
-          <button id="btn-touch-shoot" class="touch-btn shoot-btn" title="O't ochish">
-            🎯
-            <span class="touch-btn-label">OTISH</span>
-          </button>
-        </div>
-      </div>
+    <div class="menu-container">
+      <button class="btn btn-primary" id="btn-menu-solo">
+        <span class="btn-icon">🏁</span> BOTLAR BILAN O'YNASH
+      </button>
+      <button class="btn btn-secondary" id="btn-menu-multiplayer">
+        <span class="btn-icon">👥</span> DO'STLAR BILAN (12 TAGACHA)
+      </button>
+      <button class="btn btn-gold" id="btn-menu-garage">
+        <span class="btn-icon">🏎️</span> BOZOR VA GARAJ
+      </button>
+      <button class="btn" id="btn-menu-zones">
+        <span class="btn-icon">🗺️</span> ZONA / XARITA TANLASH
+      </button>
     </div>
+  </div>
 
-    <!-- MAIN MENU / LOBBY OVERLAY -->
-    <div id="overlay-lobby" class="overlay-screen">
-      <!-- Main Menu Card -->
-      <div id="main-menu-card" class="card">
-        <h1 class="game-title">GTA 1v1 CITY</h1>
-        <p class="game-subtitle">Do'stlar bilan real-vaqtda duel va ochiq shahar jangi</p>
+  <!-- BOZOR VA GARAJ MODALI -->
+  <div id="garage-modal" class="screen-overlay hidden">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h2 class="modal-title"><span>🛒</span> AVTO BOZOR VA SOZLASH</h2>
+        <button class="close-modal-btn" data-close="garage-modal">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="garage-layout">
+          <!-- Chap tomon: 3D Mashina Ko'rinishi -->
+          <div>
+            <div class="garage-preview-box">
+              <canvas id="garage-canvas"></canvas>
+              <button class="garage-nav-btn prev" id="btn-garage-prev">&#10094;</button>
+              <button class="garage-nav-btn next" id="btn-garage-next">&#10095;</button>
+              <div class="garage-car-info">
+                <div>
+                  <h3 class="garage-car-title" id="preview-car-name">Racer One</h3>
+                  <div class="garage-car-class" id="preview-car-class">SPORT KLASSI</div>
+                </div>
+              </div>
+            </div>
 
-        <div class="input-group">
-          <label for="player-nickname">O'yinchi Taxallusi</label>
-          <input type="text" id="player-nickname" class="custom-input" placeholder="Ismingizni yozing..." value="CJ Player" maxlength="15">
-        </div>
+            <!-- Mashinalar miniatyuralari -->
+            <div class="car-thumbs-strip" id="garage-thumbs-container">
+              <!-- JS orqali to'ldiriladi -->
+            </div>
 
-        <div class="menu-buttons">
-          <button id="btn-create-room" class="btn btn-primary">
-            🌐 Xona Yaratish (Do'st bilan 1v1)
-          </button>
-
-          <div class="input-group" style="margin-top: 10px; margin-bottom: 5px;">
-            <label for="room-code-input">Do'stingiz Xona Kodi</label>
-            <input type="text" id="room-code-input" class="custom-input" placeholder="Masalan: A7B9K" maxlength="10" style="text-transform: uppercase;">
+            <!-- Mashina sotib olish / tanlash harakati -->
+            <div class="garage-action-row" style="margin-top: 14px;">
+              <button class="btn btn-primary" id="btn-car-action" style="flex: 1; padding: 14px;">
+                TANLASH
+              </button>
+            </div>
           </div>
 
-          <button id="btn-join-room" class="btn btn-secondary">
-            ⚡ Ulanish va Jang Qilish
-          </button>
+          <!-- O'ng tomon: Ko'rsatkichlar va Tyuning -->
+          <div class="garage-details-panel">
+            <div class="stats-card">
+              <div class="section-label">Mashina Xarakteristikalari</div>
+              <div class="stat-row">
+                <div class="stat-label-wrap">
+                  <span>Maksimal Tezlik</span>
+                  <span id="stat-speed-val">220 km/soat</span>
+                </div>
+                <div class="stat-bar-track">
+                  <div class="stat-bar-fill" id="stat-speed-bar" style="width: 50%;"></div>
+                </div>
+              </div>
 
-          <button id="btn-solo-practice" class="btn btn-accent">
-            🤖 Mashq (AI Bot bilan 1v1)
-          </button>
-        </div>
+              <div class="stat-row">
+                <div class="stat-label-wrap">
+                  <span>Tezlanish (0-100)</span>
+                  <span id="stat-accel-val">3.8 s</span>
+                </div>
+                <div class="stat-bar-track">
+                  <div class="stat-bar-fill" id="stat-accel-bar" style="width: 55%;"></div>
+                </div>
+              </div>
 
-        <div class="instructions">
-          <b>🎮 Boshqaruv (Kompyuter):</b><br>
-          • <b>WASD</b> - Yurish yoki Moshinani haydash<br>
-          • <b>Sichqoncha</b> - Mo'ljal olish va Chap tugma - Otish<br>
-          • <b>F yoki Enter</b> - Moshinaga minish / tushish<br>
-          • <b>Q / E</b> - Qurollarni almashtirish (Pistol, Shotgun, AK-47, Bazuka)<br>
-          • <b>Shift</b> - Yugurish / Drift<br>
-          <br>
-          <b>📱 Boshqaruv (Telefon):</b><br>
-          • Chap virtual djoypad - Yurish / Burilish<br>
-          • O'ng tugmalar - Otish, Moshina, Qurol almashtirish va Yugurish!
-        </div>
-      </div>
+              <div class="stat-row">
+                <div class="stat-label-wrap">
+                  <span>Boshqaruv & Drift</span>
+                  <span id="stat-handling-val">75%</span>
+                </div>
+                <div class="stat-bar-track">
+                  <div class="stat-bar-fill" id="stat-handling-bar" style="width: 60%;"></div>
+                </div>
+              </div>
 
-      <!-- Host Waiting Card (Shown when Room is created) -->
-      <div id="host-waiting-box" class="card hidden">
-        <h2 class="game-title">Xona Tayyor!</h2>
-        <p class="game-subtitle">Do'stingizga quyidagi kodni yoki havolani yuboring:</p>
+              <div class="stat-row">
+                <div class="stat-label-wrap">
+                  <span>Nitro Kuchaytirgich</span>
+                  <span id="stat-nitro-val">100%</span>
+                </div>
+                <div class="stat-bar-track">
+                  <div class="stat-bar-fill" id="stat-nitro-bar" style="width: 45%;"></div>
+                </div>
+              </div>
+            </div>
 
-        <div class="room-code-display">
-          <span style="font-size: 0.85rem; color: #cbd5e1;">XONA KODI:</span>
-          <div id="display-room-code" class="code">-----</div>
-        </div>
+            <!-- Rang tanlash (Bo'yash) -->
+            <div class="color-picker-section">
+              <div class="section-label">Mashina Rangi</div>
+              <div class="color-swatches" id="car-color-swatches">
+                <!-- JS orqali rang doirachalari -->
+              </div>
+            </div>
 
-        <button id="btn-copy-code" class="btn btn-accent" style="width: 100%; margin-bottom: 12px;">
-          📋 Havolani Nusxalash
-        </button>
-
-        <p style="font-size: 0.85rem; color: #38bdf8; animation: pulse 1.5s infinite;">
-          ⏳ Do'stingiz ulanishi kutilmoqda... U ulanganda jang avtomatik boshlanadi!
-        </p>
-      </div>
-    </div>
-
-    <!-- GAME OVER / VICTORY MODAL -->
-    <div id="game-over-modal" class="overlay-screen hidden">
-      <div class="card">
-        <h2 id="winner-announcement" class="game-title" style="font-size: 1.8rem;">
-          Jang Tugadi!
-        </h2>
-        <p class="game-subtitle" id="final-stats-text">
-          G'olib aniqlandi!
-        </p>
-
-        <div class="menu-buttons">
-          <button id="btn-restart-game" class="btn btn-primary">
-            🔄 Yana O'ynash
-          </button>
-          <button onclick="location.reload()" class="btn btn-outline">
-            🏠 Bosh Menyu
-          </button>
+            <!-- Yangilash / Tyuning qilish -->
+            <div class="color-picker-section">
+              <div class="section-label">Dvigatel va Tyuning Upgradelari</div>
+              <div class="upgrade-grid">
+                <button class="upgrade-btn" id="btn-up-engine">
+                  <span class="upgrade-title">⚡ Dvigatel (+Tezlik)</span>
+                  <span class="upgrade-cost" id="cost-up-engine">$500</span>
+                </button>
+                <button class="upgrade-btn" id="btn-up-accel">
+                  <span class="upgrade-title">🚀 Turbo (+Tezlanish)</span>
+                  <span class="upgrade-cost" id="cost-up-accel">$500</span>
+                </button>
+                <button class="upgrade-btn" id="btn-up-handling">
+                  <span class="upgrade-title">🛞 Shinalar (+Grip)</span>
+                  <span class="upgrade-cost" id="cost-up-handling">$400</span>
+                </button>
+                <button class="upgrade-btn" id="btn-up-nitro">
+                  <span class="upgrade-title">🔥 NOS Ballon (+Nitro)</span>
+                  <span class="upgrade-cost" id="cost-up-nitro">$600</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Game Logic Script -->
+  <!-- ZONALAR / XARITALARNI TANLASH MODALI -->
+  <div id="zones-modal" class="screen-overlay hidden">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h2 class="modal-title"><span>🗺️</span> POYGA ZONASINI TANLANG</h2>
+        <button class="close-modal-btn" data-close="zones-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="zones-grid" id="zones-container">
+          <!-- JS orqali 5 ta zonalar kartochkalari yaratiladi -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MULTIPLAYER MODAL (12 KISHILIK VA BOTLAR) -->
+  <div id="multiplayer-modal" class="screen-overlay hidden">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h2 class="modal-title"><span>👥</span> DO'STLAR BILAN O'YNASH (12 TA JOY)</h2>
+        <button class="close-modal-btn" data-close="multiplayer-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="multiplayer-tabs">
+          <button class="tab-btn active" id="tab-btn-host">Xona Yaratish (Host)</button>
+          <button class="tab-btn" id="tab-btn-join">Xonaga Qo'shilish</button>
+        </div>
+
+        <!-- HOST REJIMI -->
+        <div class="mp-box" id="mp-host-section">
+          <div class="input-group">
+            <label class="input-label">Sizning ismingiz / Nikneymingiz:</label>
+            <input type="text" class="text-input" id="host-player-name" value="Poygachi" maxlength="14">
+          </div>
+
+          <div class="room-code-display">
+            <span style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">Xona Kodi (Do'stlaringizga yuboring):</span>
+            <span class="room-code-text" id="host-room-code">UZB-777</span>
+            <button class="copy-btn" id="btn-copy-room-code">📋 Kodni nusxalash</button>
+          </div>
+
+          <!-- Botlar sonini sozlash (jami 12 tagacha) -->
+          <div class="bot-slider-box">
+            <div class="slider-labels">
+              <span>Bo'sh o'rinlarni Botlar bilan to'ldirish:</span>
+              <span id="bot-count-label" style="color: var(--primary);">7 ta bot</span>
+            </div>
+            <input type="range" class="bot-range-slider" id="bot-slider" min="0" max="11" value="7">
+            <small style="color: var(--text-muted); font-size: 0.75rem;">Jami poygada 12 tagacha ishtirokchi (odamlar + botlar) qatnashadi.</small>
+          </div>
+
+          <!-- 12 ta o'yinchi uyalari -->
+          <div class="section-label">Ulangan O'yinchilar Ro'yxati (<span id="connected-count">1</span>/12):</div>
+          <div class="lobby-players-grid" id="host-lobby-players">
+            <!-- 12 ta slot JS orqali -->
+          </div>
+
+          <button class="btn btn-primary" id="btn-start-multiplayer-race" style="width: 100%; padding: 16px;">
+            🏁 POYGANI BOSHLASH (BARCHA O'YINCHILAR BILAN)
+          </button>
+        </div>
+
+        <!-- JOIN REJIMI -->
+        <div class="mp-box hidden" id="mp-join-section">
+          <div class="input-group">
+            <label class="input-label">Sizning ismingiz:</label>
+            <input type="text" class="text-input" id="join-player-name" value="Mehmon" maxlength="14">
+          </div>
+
+          <div class="input-group">
+            <label class="input-label">Do'stingiz bergan Xona Kodini kiriting:</label>
+            <input type="text" class="text-input" id="join-room-code-input" placeholder="Masalan: UZB-777" style="text-transform: uppercase;">
+          </div>
+
+          <button class="btn btn-secondary" id="btn-submit-join" style="width: 100%; padding: 14px;">
+            🚀 XONAGA KIRISH
+          </button>
+
+          <div id="join-waiting-status" class="hidden" style="text-align: center; padding: 20px;">
+            <div class="countdown-number" style="font-size: 2rem;">⌛</div>
+            <p>Xost poygani boshlashini kutyapmiz...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOZLAMALAR MODALI -->
+  <div id="settings-modal" class="screen-overlay hidden">
+    <div class="modal-window" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2 class="modal-title"><span>⚙️</span> SOZLAMALAR</h2>
+        <button class="close-modal-btn" data-close="settings-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="settings-grid">
+          <div class="setting-item">
+            <span>O'yin Ovoz Efektlari</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-sound" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <span>Mobil Ekran Boshqaruv Tugmalari</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-touch-controls" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <span>Kamera Ko'rinishi</span>
+            <select id="setting-camera-mode" class="text-input" style="width: 140px; padding: 6px 10px;">
+              <option value="chase">Orqadan (3D)</option>
+              <option value="hood">Kapondan</option>
+              <option value="top">Yuqoridan</option>
+            </select>
+          </div>
+
+          <div class="setting-item">
+            <span>Grafika Sifati</span>
+            <select id="setting-graphics" class="text-input" style="width: 140px; padding: 6px 10px;">
+              <option value="high">Yuqori (60 FPS)</option>
+              <option value="medium">O'rta</option>
+              <option value="low">Tejamkor</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       O'YIN VAQTI HUD INTERFEYSI
+       ============================================== -->
+  <div id="hud-overlay" class="hidden">
+    <!-- Yuqori HUD -->
+    <div class="hud-top">
+      <div class="hud-position-box">
+        <div class="position-label">O'rin</div>
+        <div>
+          <span class="position-val" id="hud-rank">1</span>
+          <span class="position-total">/12</span>
+        </div>
+      </div>
+
+      <div class="hud-lap-box">
+        <div class="lap-label">Aylana (Lap)</div>
+        <div class="lap-val" id="hud-lap">1/3</div>
+      </div>
+
+      <!-- Radar / Kichik xarita -->
+      <div class="hud-minimap-wrap">
+        <canvas id="minimap-canvas" width="130" height="130"></canvas>
+      </div>
+    </div>
+
+    <!-- O'rtadagi hisoblash va drift xabarlari -->
+    <div class="hud-center-messages">
+      <div class="countdown-number" id="hud-countdown"></div>
+      <div class="drift-badge" id="hud-drift-badge">DRIFT +500</div>
+    </div>
+
+    <!-- Pastki HUD: Tezlik, Nitro va Jonli Liderlar -->
+    <div class="hud-bottom">
+      <!-- 12 poygachilar ro'yxati -->
+      <div class="hud-leaderboard-list" id="hud-leaderboard">
+        <!-- 1-12 o'rinlar real vaqtda dinamik yangilanadi -->
+      </div>
+
+      <!-- Spidometr va Nitro shkalasi -->
+      <div class="speedometer-wrap">
+        <div class="speed-digital" id="hud-speed">0</div>
+        <div class="speed-unit">KM / SOAT</div>
+        <div class="nitro-wrap">
+          <div class="nitro-label-row">
+            <span>NITRO (NOS)</span>
+            <span id="hud-nitro-val">100%</span>
+          </div>
+          <div class="nitro-bar-bg">
+            <div class="nitro-bar-fill" id="hud-nitro-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       MOBIL QURILMALAR BOSHQARUV TUGMALARI (TOUCH)
+       ============================================== -->
+  <div id="touch-controls">
+    <!-- Chap tomon: Rul (Chapga va O'ngga burilish) -->
+    <div class="touch-left-zone">
+      <button class="touch-btn" id="t-btn-left" aria-label="Chapga">◀</button>
+      <button class="touch-btn" id="t-btn-right" aria-label="O'ngga">▶</button>
+    </div>
+
+    <!-- O'ng tomon: Gaz, Tormoz va Nitro -->
+    <div class="touch-right-zone">
+      <button class="touch-btn touch-btn-nitro" id="t-btn-nitro" aria-label="Nitro Boost">🔥</button>
+      <div class="touch-pedals-group">
+        <button class="touch-btn touch-btn-pedal pedal-brake" id="t-btn-brake" aria-label="Tormoz / Orqaga">
+          <span>🛑</span>
+          <span style="font-size: 0.65rem;">TORMOZ</span>
+        </button>
+        <button class="touch-btn touch-btn-pedal pedal-gas" id="t-btn-gas" aria-label="Gaz">
+          <span>⚡</span>
+          <span style="font-size: 0.65rem;">GAZ</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Yuqori yordamchi tugmalar (Qayta qo'yish, Kamera, Menyu) -->
+    <div class="touch-top-row">
+      <button class="touch-small-btn" id="t-btn-respawn" title="Mashinani yo'lga qaytarish">🔄</button>
+      <button class="touch-small-btn" id="t-btn-camera" title="Kamerani almashtirish">📷</button>
+      <button class="touch-small-btn" id="t-btn-exit" title="Menyuga chiqish">🏠</button>
+    </div>
+  </div>
+
+  <!-- FINISH / G'ALABA EKRANI -->
+  <div id="victory-modal" class="screen-overlay hidden">
+    <div class="victory-card">
+      <div class="victory-trophy" id="victory-trophy-icon">🏆</div>
+      <h2 class="victory-rank-title" id="victory-rank-text">1-O'RIN! G'ALABA!</h2>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Ajoyib poyga namoyish etildi!</p>
+
+      <div class="victory-prize-box">
+        <span>+</span>
+        <span id="victory-coins-won">1,250</span>
+        <span>💰</span>
+      </div>
+
+      <div class="victory-stats-row">
+        <div class="v-stat">
+          <span class="v-stat-label">Vaqt</span>
+          <span class="v-stat-val" id="victory-time">01:42</span>
+        </div>
+        <div class="v-stat">
+          <span class="v-stat-label">Maks Tezlik</span>
+          <span class="v-stat-val" id="victory-max-speed">248 km/s</span>
+        </div>
+        <div class="v-stat">
+          <span class="v-stat-label">Drift Ball</span>
+          <span class="v-stat-val" id="victory-drift">1,800</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; width: 100%; margin-top: 10px;">
+        <button class="btn btn-primary" id="btn-victory-restart" style="flex: 1; padding: 14px;">
+          🔄 QAYTA O'YNASH
+        </button>
+        <button class="btn btn-gold" id="btn-victory-garage" style="flex: 1; padding: 14px;">
+          🏎️ GARAJGA
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Xabarnoma toast -->
+  <div class="toast-msg" id="toast-message"></div>
+
+  <!-- Asosiy O'yin Skripti -->
   <script src="game.js"></script>
 </body>
 </html>

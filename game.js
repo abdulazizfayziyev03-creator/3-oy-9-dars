@@ -1,2249 +1,2242 @@
 /**
  * ===================================================================
- * GTA 1v1 SHOWDOWN - ADVANCED TOP-DOWN MULTIPLAYER ACTION GAME
- * Features:
- *  - 2D Canvas GTA-style Open World City (roads, buildings, trees, sidewalks)
- *  - Drivable Vehicles (Sports, Police with sirens, Muscle, SUV)
- *  - Arsenal: Fists, Pistol, Shotgun, AK-47, Rocket Launcher (RPG)
- *  - 1v1 Real-Time Peer-to-Peer Multiplayer (WebRTC via PeerJS)
- *  - Intelligent AI Bot 1v1 Mode for Solo Practice
- *  - Full Mobile Touch Controls (Dual Joysticks + Action Buttons)
- *  - Procedural Web Audio API Sound Effects (Zero external assets needed)
- *  - Mini-map Radar, Car Physics, Drifting, Skidmarks, Explosions, Pickups
+ * TURBO DRIFT 3D - ASOSIY O'YIN MOTORASI (GAME.JS)
+ * - 3D Poyga (Three.js)
+ * - 12 kishilik poyga (Odamlar + Aqlli Botlar)
+ * - WebRTC Onlayn Multiplayer (PeerJS, 12 o'yinchigacha)
+ * - 5 xil Poyga Zonalari (Shahar, Sahro, Qor, Vulqon, O'rmon)
+ * - Avto Bozor & Garaj (6 xil mashinalar, Upgradelar, Bo'yash)
+ * - Web Audio API bilan haqiqiy motor va drift tovushlari
+ * - Mobil telefonlar uchun to'liq sensorli boshqaruv
  * ===================================================================
  */
 
-// Canvas roundRect Polyfill for universal cross-browser / mobile support
-if (!CanvasRenderingContext2D.prototype.roundRect) {
-  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r = 0) {
-    if (w < 2 * r) r = w / 2;
-    if (h < 2 * r) r = h / 2;
-    this.beginPath();
-    this.moveTo(x + r, y);
-    this.arcTo(x + w, y, x + w, y + h, r);
-    this.arcTo(x + w, y + h, x, y + h, r);
-    this.arcTo(x, y + h, x, y, r);
-    this.arcTo(x, y, x + w, y, r);
-    this.closePath();
-    return this;
+(function () {
+  'use strict';
+
+  // -------------------------------------------------------------
+  // 1. O'YIN SOZLAMALARI VA STATISTIKASI (LOCALSTORAGE)
+  // -------------------------------------------------------------
+  const STORAGE_KEYS = {
+    COINS: 'turbo_drift_coins',
+    UNLOCKED: 'turbo_drift_unlocked_cars',
+    CURRENT_CAR: 'turbo_drift_current_car',
+    CAR_COLORS: 'turbo_drift_car_colors',
+    UPGRADES: 'turbo_drift_upgrades',
+    SETTINGS: 'turbo_drift_settings'
   };
-}
 
-// --- SOUND ENGINE (Web Audio API) ---
-class SoundController {
-  constructor() {
-    this.ctx = null;
-    this.muted = false;
-    this.carEngineOsc = null;
-    this.carEngineGain = null;
-  }
+  const GameData = {
+    coins: 1000,
+    unlockedCars: ['car_starter'],
+    selectedCarId: 'car_starter',
+    selectedZoneId: 'cyber',
+    carColors: {
+      car_starter: '#00f3ff',
+      car_muscle: '#ff3b30',
+      car_offroad: '#ff9e00',
+      car_cyber: '#b026ff',
+      car_hyper: '#ffbe0b',
+      car_f1: '#00ff88'
+    },
+    upgrades: {
+      engine: 1,
+      accel: 1,
+      handling: 1,
+      nitro: 1
+    },
+    settings: {
+      sound: true,
+      touchControls: true,
+      cameraMode: 'chase', // chase, hood, top
+      graphics: 'high'
+    },
 
-  init() {
-    if (!this.ctx) {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) {
-        this.ctx = new AudioCtx();
+    load() {
+      try {
+        const savedCoins = localStorage.getItem(STORAGE_KEYS.COINS);
+        if (savedCoins !== null) this.coins = parseInt(savedCoins, 10);
+
+        const savedUnlocked = localStorage.getItem(STORAGE_KEYS.UNLOCKED);
+        if (savedUnlocked) this.unlockedCars = JSON.parse(savedUnlocked);
+
+        const savedCar = localStorage.getItem(STORAGE_KEYS.CURRENT_CAR);
+        if (savedCar) this.selectedCarId = savedCar;
+
+        const savedColors = localStorage.getItem(STORAGE_KEYS.CAR_COLORS);
+        if (savedColors) this.carColors = Object.assign(this.carColors, JSON.parse(savedColors));
+
+        const savedUpgrades = localStorage.getItem(STORAGE_KEYS.UPGRADES);
+        if (savedUpgrades) this.upgrades = Object.assign(this.upgrades, JSON.parse(savedUpgrades));
+
+        const savedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+        if (savedSettings) this.settings = Object.assign(this.settings, JSON.parse(savedSettings));
+      } catch (e) {
+        console.warn('LocalStorage yuklashda xatolik:', e);
       }
-    }
-    if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
-  }
+    },
 
-  playShoot(type = 'pistol') {
-    if (this.muted || !this.ctx) return;
-    try {
-      const t = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      
-      const bufferSize = Math.floor(this.ctx.sampleRate * 0.15);
-      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-      const output = buffer.getChannelData(0);
+    save() {
+      try {
+        localStorage.setItem(STORAGE_KEYS.COINS, this.coins.toString());
+        localStorage.setItem(STORAGE_KEYS.UNLOCKED, JSON.stringify(this.unlockedCars));
+        localStorage.setItem(STORAGE_KEYS.CURRENT_CAR, this.selectedCarId);
+        localStorage.setItem(STORAGE_KEYS.CAR_COLORS, JSON.stringify(this.carColors));
+        localStorage.setItem(STORAGE_KEYS.UPGRADES, JSON.stringify(this.upgrades));
+        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(this.settings));
+      } catch (e) {
+        console.warn('LocalStorage saqlashda xatolik:', e);
+      }
+    },
+
+    addCoins(amount) {
+      this.coins += amount;
+      this.save();
+      updateCoinDisplay();
+    }
+  };
+
+  // -------------------------------------------------------------
+  // 2. MASHINALAR VA BOZOR KATALOGI (6 TA MASHINA)
+  // -------------------------------------------------------------
+  const CAR_CATALOG = [
+    {
+      id: 'car_starter',
+      name: 'Racer One',
+      carClass: 'Sport Sedan',
+      price: 0,
+      baseSpeed: 180,
+      baseAccel: 3.8,
+      baseHandling: 72,
+      baseNitro: 100,
+      bodyStyle: 'sedan',
+      color: '#00f3ff',
+      desc: 'Boshlang\'ich engil va qulay sport mashinasi'
+    },
+    {
+      id: 'car_muscle',
+      name: 'Nitro Viper',
+      carClass: 'Muscle GT',
+      price: 1500,
+      baseSpeed: 215,
+      baseAccel: 3.2,
+      baseHandling: 68,
+      baseNitro: 120,
+      bodyStyle: 'muscle',
+      color: '#ff3b30',
+      desc: 'Katta quvvat va baland tezlanishga ega mushakdor GT'
+    },
+    {
+      id: 'car_offroad',
+      name: 'Sahara Rover',
+      carClass: '4x4 Trophy Buggy',
+      price: 3200,
+      baseSpeed: 200,
+      baseAccel: 3.0,
+      baseHandling: 88,
+      baseNitro: 110,
+      bodyStyle: 'buggy',
+      color: '#ff9e00',
+      desc: 'Qum va qor zonalarida mukammal boshqaruv'
+    },
+    {
+      id: 'car_cyber',
+      name: 'Cyber Phantom',
+      carClass: 'Cyber Concept',
+      price: 6500,
+      baseSpeed: 250,
+      baseAccel: 2.5,
+      baseHandling: 82,
+      baseNitro: 140,
+      bodyStyle: 'cyber',
+      color: '#b026ff',
+      desc: 'Futuristik neon giperkar, juda tezkor va chaqqon'
+    },
+    {
+      id: 'car_hyper',
+      name: 'Hyper Lightning',
+      carClass: 'Exotic Hypercar',
+      price: 12000,
+      baseSpeed: 285,
+      baseAccel: 2.1,
+      baseHandling: 90,
+      baseNitro: 160,
+      bodyStyle: 'hyper',
+      color: '#ffbe0b',
+      desc: 'Eng yuqori maksimal tezlikka ega afsonaviy avtomobil'
+    },
+    {
+      id: 'car_f1',
+      name: 'Apex Formula',
+      carClass: 'Formula Legend',
+      price: 20000,
+      baseSpeed: 320,
+      baseAccel: 1.7,
+      baseHandling: 98,
+      baseNitro: 180,
+      bodyStyle: 'formula',
+      color: '#00ff88',
+      desc: 'Trassalarning mutlaq chempioni - Formula 1 monstri'
+    }
+  ];
+
+  const COLOR_PALETTE = [
+    '#00f3ff', '#ff3b30', '#00ff88', '#ffbe0b', 
+    '#b026ff', '#ffffff', '#111111', '#ff5400', 
+    '#0077b6', '#e024c3'
+  ];
+
+  // -------------------------------------------------------------
+  // 3. POYGA ZONALARI (5 TA XARITA)
+  // -------------------------------------------------------------
+  const ZONES = [
+    {
+      id: 'cyber',
+      name: 'Kiber Neon Shahar',
+      badge: 'Tungi Trassa',
+      desc: 'Yaltiroq asfalt, neon osmono\'par binolar va yuqori tezlik ko\'prigi',
+      cssClass: 'zone-cyber',
+      skyColor: 0x050814,
+      fogColor: 0x0b132b,
+      groundColor: 0x070b19,
+      roadColor: 0x141b2d,
+      curbColor: 0x00f3ff,
+      ambientColor: 0x223355,
+      sunColor: 0x00f3ff,
+      sunIntensity: 1.2,
+      particleType: 'cyberGrid'
+    },
+    {
+      id: 'desert',
+      name: 'Sahro Bo\'roni',
+      badge: 'Qumli Kanyon',
+      desc: 'Oltin qum barxanlari, piramidalar va issiq shamolli burilishlar',
+      cssClass: 'zone-desert',
+      skyColor: 0xfb8b24,
+      fogColor: 0x9a031e,
+      groundColor: 0xd48b3c,
+      roadColor: 0x3d2c1d,
+      curbColor: 0xffbe0b,
+      ambientColor: 0x5a3214,
+      sunColor: 0xffe29a,
+      sunIntensity: 1.6,
+      particleType: 'sandDust'
+    },
+    {
+      id: 'snow',
+      name: 'Qorli Cho\'qqilar',
+      badge: 'Muzli Tog\'',
+      desc: 'Muzlagan ko\'l, qalin qor archalari va sirpanchiq ajoyib drift',
+      cssClass: 'zone-snow',
+      skyColor: 0x457b9d,
+      fogColor: 0x1d3557,
+      groundColor: 0xe0f2fe,
+      roadColor: 0x64748b,
+      curbColor: 0x00f3ff,
+      ambientColor: 0x334e68,
+      sunColor: 0xffffff,
+      sunIntensity: 1.4,
+      particleType: 'snowFlakes'
+    },
+    {
+      id: 'volcano',
+      name: 'Vulqon Qonuni',
+      badge: 'Lava Halqasi',
+      desc: 'Olovli lava daryolari, vulqon qoyalari va ekstremal olov yo\'li',
+      cssClass: 'zone-volcano',
+      skyColor: 0x2b0606,
+      fogColor: 0x470808,
+      groundColor: 0x1c1010,
+      roadColor: 0x241a1a,
+      curbColor: 0xff3b30,
+      ambientColor: 0x661818,
+      sunColor: 0xff5400,
+      sunIntensity: 1.5,
+      particleType: 'fireEmbers'
+    },
+    {
+      id: 'forest',
+      name: 'Yashil Vodiy',
+      badge: 'Klassik Ralli',
+      desc: 'Yam-yashil adirlar, archa o\'rmonlari va musaffo quyoshli osmon',
+      cssClass: 'zone-forest',
+      skyColor: 0x38b000,
+      fogColor: 0x1b4332,
+      groundColor: 0x2d6a4f,
+      roadColor: 0x212529,
+      curbColor: 0xffffff,
+      ambientColor: 0x2d4a3e,
+      sunColor: 0xfffae0,
+      sunIntensity: 1.8,
+      particleType: 'fallingLeaves'
+    }
+  ];
+
+  // Botlar uchun 11 ta maxsus nikneymlar va xarakterlar
+  const BOT_PROFILES = [
+    { name: 'Temur Poygachi', carId: 'car_muscle', color: '#ff3b30', skill: 0.95 },
+    { name: 'Speedy_Uz', carId: 'car_cyber', color: '#b026ff', skill: 0.92 },
+    { name: 'Vortex_99', carId: 'car_hyper', color: '#ffbe0b', skill: 0.96 },
+    { name: 'Drift_Master', carId: 'car_f1', color: '#00ff88', skill: 0.98 },
+    { name: 'Falcon_X', carId: 'car_starter', color: '#00f3ff', skill: 0.88 },
+    { name: 'Blaze_Tashkent', carId: 'car_muscle', color: '#ff5400', skill: 0.90 },
+    { name: 'Shadow_Samarkand', carId: 'car_cyber', color: '#111111', skill: 0.93 },
+    { name: 'Titan_Rider', carId: 'car_offroad', color: '#ff9e00', skill: 0.89 },
+    { name: 'Ghost_Phantom', carId: 'car_hyper', color: '#ffffff', skill: 0.94 },
+    { name: 'Thunder_Bukhara', carId: 'car_f1', color: '#e024c3', skill: 0.97 },
+    { name: 'Nitro_Boy', carId: 'car_starter', color: '#0077b6', skill: 0.87 }
+  ];
+
+  // -------------------------------------------------------------
+  // 4. WEB AUDIO SINTESATOR (ENGINE, DRIFT, NITRO, COIN, CRASH)
+  // -------------------------------------------------------------
+  class SoundSynthesizer {
+    constructor() {
+      this.ctx = null;
+      this.engineOsc1 = null;
+      this.engineOsc2 = null;
+      this.engineGain = null;
+      this.driftNoise = null;
+      this.driftGain = null;
+      this.isStarted = false;
+    }
+
+    init() {
+      if (this.ctx) return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      this.ctx = new AudioCtx();
+      this.createEngineSound();
+      this.createDriftSound();
+      this.isStarted = true;
+    }
+
+    createEngineSound() {
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      this.engineGain = this.ctx.createGain();
+      this.engineGain.gain.setValueAtTime(0, now);
+
+      this.engineOsc1 = this.ctx.createOscillator();
+      this.engineOsc1.type = 'sawtooth';
+      this.engineOsc1.frequency.setValueAtTime(55, now);
+
+      this.engineOsc2 = this.ctx.createOscillator();
+      this.engineOsc2.type = 'triangle';
+      this.engineOsc2.frequency.setValueAtTime(110, now);
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(600, now);
+
+      this.engineOsc1.connect(filter);
+      this.engineOsc2.connect(filter);
+      filter.connect(this.engineGain);
+      this.engineGain.connect(this.ctx.destination);
+
+      this.engineOsc1.start();
+      this.engineOsc2.start();
+    }
+
+    createDriftSound() {
+      if (!this.ctx) return;
+      const bufferSize = this.ctx.sampleRate * 2;
+      const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
       for (let i = 0; i < bufferSize; i++) {
         output[i] = Math.random() * 2 - 1;
       }
+
       const whiteNoise = this.ctx.createBufferSource();
-      whiteNoise.buffer = buffer;
+      whiteNoise.buffer = noiseBuffer;
+      whiteNoise.loop = true;
 
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'bandpass';
+      const bandpass = this.ctx.createBiquadFilter();
+      bandpass.type = 'bandpass';
+      bandpass.frequency.setValueAtTime(1200, this.ctx.currentTime);
+      bandpass.Q.setValueAtTime(3.0, this.ctx.currentTime);
 
-      if (type === 'shotgun') {
-        filter.frequency.setValueAtTime(550, t);
-        filter.Q.setValueAtTime(1.5, t);
-        gain.gain.setValueAtTime(0.4, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.22);
-        whiteNoise.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.ctx.destination);
-        whiteNoise.start(t);
-        whiteNoise.stop(t + 0.22);
-      } else if (type === 'rocket') {
-        filter.frequency.setValueAtTime(320, t);
-        gain.gain.setValueAtTime(0.5, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
-        whiteNoise.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.ctx.destination);
-        whiteNoise.start(t);
-        whiteNoise.stop(t + 0.35);
-      } else if (type === 'ak47') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(180, t);
-        osc.frequency.exponentialRampToValueAtTime(35, t + 0.09);
-        gain.gain.setValueAtTime(0.28, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.09);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(t);
-        osc.stop(t + 0.09);
-      } else {
-        // Pistol
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(360, t);
-        osc.frequency.exponentialRampToValueAtTime(45, t + 0.12);
-        gain.gain.setValueAtTime(0.32, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(t);
-        osc.stop(t + 0.12);
+      this.driftGain = this.ctx.createGain();
+      this.driftGain.gain.setValueAtTime(0, this.ctx.currentTime);
+
+      whiteNoise.connect(bandpass);
+      bandpass.connect(this.driftGain);
+      this.driftGain.connect(this.ctx.destination);
+
+      whiteNoise.start();
+    }
+
+    updateEngine(speedKmh, isGas, isNitro) {
+      if (!this.ctx || !GameData.settings.sound) {
+        if (this.engineGain) this.engineGain.gain.setValueAtTime(0, this.ctx ? this.ctx.currentTime : 0);
+        return;
       }
-    } catch (e) {}
-  }
+      if (this.ctx.state === 'suspended') this.ctx.resume();
 
-  playPunch() {
-    if (this.muted || !this.ctx) return;
-    try {
-      const t = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(120, t);
-      osc.frequency.exponentialRampToValueAtTime(30, t + 0.08);
-      gain.gain.setValueAtTime(0.25, t);
-      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.08);
-    } catch(e) {}
-  }
+      const speedRatio = Math.min(speedKmh / 300, 1);
+      const baseFreq = 50 + speedRatio * 180 + (isNitro ? 50 : 0);
+      const now = this.ctx.currentTime;
 
-  playExplosion() {
-    if (this.muted || !this.ctx) return;
-    try {
-      const t = this.ctx.currentTime;
-      const bufferSize = Math.floor(this.ctx.sampleRate * 0.8);
-      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-      const output = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.25));
-      }
-      const noise = this.ctx.createBufferSource();
-      noise.buffer = buffer;
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(250, t);
-      filter.frequency.linearRampToValueAtTime(60, t + 0.8);
+      this.engineOsc1.frequency.setTargetAtTime(baseFreq, now, 0.05);
+      this.engineOsc2.frequency.setTargetAtTime(baseFreq * 1.5, now, 0.05);
 
-      const gain = this.ctx.createGain();
-      gain.gain.setValueAtTime(0.7, t);
-      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.8);
+      const targetGain = isGas ? 0.14 : 0.06;
+      this.engineGain.gain.setTargetAtTime(targetGain, now, 0.05);
+    }
 
-      noise.connect(filter);
-      filter.connect(gain);
-      gain.connect(this.ctx.destination);
-      noise.start(t);
-      noise.stop(t + 0.8);
-    } catch (e) {}
-  }
+    setDrift(active) {
+      if (!this.ctx || !GameData.settings.sound || !this.driftGain) return;
+      const targetGain = active ? 0.18 : 0;
+      this.driftGain.gain.setTargetAtTime(targetGain, this.ctx.currentTime, 0.06);
+    }
 
-  playHit() {
-    if (this.muted || !this.ctx) return;
-    try {
-      const t = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(140, t);
-      osc.frequency.exponentialRampToValueAtTime(45, t + 0.1);
-      gain.gain.setValueAtTime(0.2, t);
-      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.1);
-    } catch (e) {}
-  }
-
-  playPickup() {
-    if (this.muted || !this.ctx) return;
-    try {
-      const t = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, t);
-      osc.frequency.setValueAtTime(660, t + 0.08);
-      osc.frequency.setValueAtTime(880, t + 0.16);
-      gain.gain.setValueAtTime(0.2, t);
-      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.28);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.28);
-    } catch(e) {}
-  }
-
-  playCarHorn() {
-    if (this.muted || !this.ctx) return;
-    try {
-      const t = this.ctx.currentTime;
-      const osc1 = this.ctx.createOscillator();
-      const osc2 = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc1.type = 'triangle';
-      osc2.type = 'triangle';
-      osc1.frequency.setValueAtTime(440, t);
-      osc2.frequency.setValueAtTime(554, t);
-      gain.gain.setValueAtTime(0.25, t);
-      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
-      osc1.connect(gain);
-      osc2.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc1.start(t);
-      osc2.start(t);
-      osc1.stop(t + 0.4);
-      osc2.stop(t + 0.4);
-    } catch(e) {}
-  }
-
-  playCarCrash() {
-    if (this.muted || !this.ctx) return;
-    try {
-      const t = this.ctx.currentTime;
+    playNitroSound() {
+      if (!this.ctx || !GameData.settings.sound) return;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(100, t);
-      osc.frequency.exponentialRampToValueAtTime(25, t + 0.22);
-      gain.gain.setValueAtTime(0.35, t);
-      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.22);
+      osc.frequency.setValueAtTime(350, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.4);
+
+      gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+
       osc.connect(gain);
       gain.connect(this.ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.22);
-    } catch(e) {}
-  }
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.45);
+    }
 
-  updateEngineSound(isDriving, speedRatio) {
-    if (this.muted || !this.ctx) return;
-    try {
-      if (isDriving) {
-        if (!this.carEngineOsc) {
-          this.carEngineOsc = this.ctx.createOscillator();
-          this.carEngineGain = this.ctx.createGain();
-          this.carEngineOsc.type = 'sawtooth';
-          this.carEngineGain.gain.setValueAtTime(0.035, this.ctx.currentTime);
-          this.carEngineOsc.connect(this.carEngineGain);
-          this.carEngineGain.connect(this.ctx.destination);
-          this.carEngineOsc.start();
-        }
-        const freq = 55 + Math.min(speedRatio, 1.2) * 110;
-        this.carEngineOsc.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.05);
-      } else {
-        if (this.carEngineOsc) {
-          this.carEngineGain.gain.setTargetAtTime(0.001, this.ctx.currentTime, 0.05);
-          setTimeout(() => {
-            if (this.carEngineOsc && !isDriving) {
-              try { this.carEngineOsc.stop(); } catch(e){}
-              this.carEngineOsc = null;
-            }
-          }, 80);
-        }
-      }
-    } catch(e) {}
-  }
-}
+    playCoinSound() {
+      if (!this.ctx || !GameData.settings.sound) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(987.77, now); // B5
+      osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
 
-const sounds = new SoundController();
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
 
-// --- CONSTANTS & WEAPONS DEFINITION ---
-const MAP_WIDTH = 3200;
-const MAP_HEIGHT = 3200;
-const WINNING_SCORE = 5;
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(now + 0.32);
+    }
 
-const WEAPONS = {
-  fists: {
-    name: 'Musht',
-    icon: '👊',
-    damage: 18,
-    fireRate: 350,
-    range: 65,
-    bulletSpeed: 0,
-    ammo: Infinity,
-    isMelee: true
-  },
-  pistol: {
-    name: 'Pistol 9mm',
-    icon: '🔫',
-    damage: 24,
-    fireRate: 260,
-    range: 750,
-    bulletSpeed: 17,
-    ammo: 60,
-    maxAmmo: 120
-  },
-  shotgun: {
-    name: 'Shotgun',
-    icon: '💥',
-    damage: 16,
-    pellets: 5,
-    spread: 0.26,
-    fireRate: 650,
-    range: 480,
-    bulletSpeed: 14,
-    ammo: 24,
-    maxAmmo: 48
-  },
-  ak47: {
-    name: 'AK-47',
-    icon: '⚡',
-    damage: 22,
-    fireRate: 110,
-    range: 850,
-    bulletSpeed: 20,
-    ammo: 90,
-    maxAmmo: 180
-  },
-  rocket: {
-    name: 'Bazuka (RPG)',
-    icon: '🚀',
-    damage: 95,
-    radius: 120,
-    fireRate: 1100,
-    range: 900,
-    bulletSpeed: 11,
-    ammo: 6,
-    maxAmmo: 12,
-    isRocket: true
-  }
-};
+    playCountdownBeep(isFinal) {
+      if (!this.ctx || !GameData.settings.sound) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(isFinal ? 880 : 440, now);
 
-// --- GAME STATE ---
-let canvas, ctx;
-let minimapCanvas, minimapCtx;
-let gameRunning = false;
-let isHost = false;
-let peer = null;
-let peerConn = null;
-let isBotMatch = false;
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + (isFinal ? 0.6 : 0.25));
 
-let localPlayer = null;
-let remotePlayer = null;
-let botPlayer = null;
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(now + (isFinal ? 0.65 : 0.28));
+    }
 
-let buildings = [];
-let cars = [];
-let pickups = [];
-let bullets = [];
-let particles = [];
-let skidmarks = [];
-
-let camera = { x: 0, y: 0 };
-let input = {
-  up: false,
-  down: false,
-  left: false,
-  right: false,
-  sprint: false,
-  shoot: false,
-  enterCar: false,
-  aimAngle: 0,
-  touchAimActive: false
-};
-
-let scores = { local: 0, remote: 0 };
-let lastShootTime = 0;
-let lastNetSyncTime = 0;
-
-// --- MAP GENERATION ---
-function generateMap() {
-  buildings = [];
-  cars = [];
-  pickups = [];
-  skidmarks = [];
-
-  const blockSize = 500;
-  const roadWidth = 140;
-  const numBlocksX = Math.floor(MAP_WIDTH / (blockSize + roadWidth));
-  const numBlocksY = Math.floor(MAP_HEIGHT / (blockSize + roadWidth));
-
-  // Generate City Buildings
-  for (let bx = 0; bx < numBlocksX; bx++) {
-    for (let by = 0; by < numBlocksY; by++) {
-      const blockX = roadWidth / 2 + bx * (blockSize + roadWidth);
-      const blockY = roadWidth / 2 + by * (blockSize + roadWidth);
-
-      // Park square on some blocks
-      if ((bx + by) % 4 === 1) {
-        continue;
-      }
-
-      const bW1 = blockSize * 0.46;
-      const bH1 = blockSize * 0.46;
-      const colors = ['#1e293b', '#334155', '#242a38', '#1f2430', '#2d3748'];
-
-      buildings.push({
-        x: blockX + 15,
-        y: blockY + 15,
-        w: bW1,
-        h: bH1,
-        color: colors[(bx * 3 + by) % colors.length],
-        roofColor: '#0f172a',
-        hasHelipad: (bx + by) % 3 === 0
-      });
-
-      buildings.push({
-        x: blockX + bW1 + 35,
-        y: blockY + 15,
-        w: bW1,
-        h: bH1,
-        color: colors[(bx * 2 + by + 1) % colors.length],
-        roofColor: '#172033',
-        hasHelipad: false
-      });
-
-      buildings.push({
-        x: blockX + 15,
-        y: blockY + bH1 + 35,
-        w: blockSize - 30,
-        h: bH1 * 0.85,
-        color: colors[(bx + by * 2) % colors.length],
-        roofColor: '#090d16',
-        hasHelipad: false
+    playVictorySound() {
+      if (!this.ctx || !GameData.settings.sound) return;
+      const notes = [523.25, 659.25, 783.99, 1046.50]; // C E G C
+      notes.forEach((freq, idx) => {
+        setTimeout(() => {
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(now + 0.42);
+        }, idx * 140);
       });
     }
   }
 
-  // Border Outer Walls
-  const wallThick = 60;
-  buildings.push({ x: -wallThick, y: -wallThick, w: MAP_WIDTH + wallThick * 2, h: wallThick, color: '#05070a', roofColor: '#000' });
-  buildings.push({ x: -wallThick, y: MAP_HEIGHT, w: MAP_WIDTH + wallThick * 2, h: wallThick, color: '#05070a', roofColor: '#000' });
-  buildings.push({ x: -wallThick, y: 0, w: wallThick, h: MAP_HEIGHT, color: '#05070a', roofColor: '#000' });
-  buildings.push({ x: MAP_WIDTH, y: 0, w: wallThick, h: MAP_HEIGHT, color: '#05070a', roofColor: '#000' });
+  const audioSynth = new SoundSynthesizer();
 
-  // Spawn Cars along roads
-  const carTypes = [
-    { type: 'sports', color: '#ff0055', topSpeed: 13.5, accel: 0.28, turnSpeed: 0.055, name: 'Infernus Sport' },
-    { type: 'police', color: '#ffffff', secondColor: '#000000', topSpeed: 12.5, accel: 0.25, turnSpeed: 0.05, isPolice: true, name: 'Police Cruiser' },
-    { type: 'muscle', color: '#ffb703', topSpeed: 12.0, accel: 0.32, turnSpeed: 0.046, name: 'Stallion Muscle' },
-    { type: 'suv', color: '#00e5ff', topSpeed: 10.5, accel: 0.22, turnSpeed: 0.042, name: 'Patriot SUV' }
-  ];
+  // -------------------------------------------------------------
+  // 5. 3D MASHINA YARATISH YORDAMCHISI (PROCEDURAL 3D MESHES)
+  // -------------------------------------------------------------
+  function create3DCarMesh(carConfig, colorHex) {
+    const carGroup = new THREE.Group();
+    const bodyColor = new THREE.Color(colorHex || carConfig.color);
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: bodyColor,
+      roughness: 0.2,
+      metalness: 0.8
+    });
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0x111625,
+      roughness: 0.1,
+      metalness: 0.9,
+      transparent: true,
+      opacity: 0.85
+    });
+    const blackMat = new THREE.MeshStandardMaterial({
+      color: 0x111111,
+      roughness: 0.7
+    });
+    const rimMat = new THREE.MeshStandardMaterial({
+      color: 0xdde5ed,
+      metalness: 0.9,
+      roughness: 0.1
+    });
+    const glowCyanMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+    const glowRedMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
 
-  let carIdCounter = 1;
-  for (let bx = 0; bx < numBlocksX; bx++) {
-    for (let by = 0; by < numBlocksY; by++) {
-      const roadX = bx * (blockSize + roadWidth) + blockSize + roadWidth / 2;
-      const roadY = by * (blockSize + roadWidth) + blockSize + roadWidth / 2;
+    let bodyLength = 4.2;
+    let bodyWidth = 1.9;
+    let bodyHeight = 0.85;
 
-      if ((bx + by) % 2 === 0 && carIdCounter <= 16) {
-        const spec = carTypes[carIdCounter % carTypes.length];
-        cars.push({
-          id: carIdCounter++,
-          x: roadX - 30,
-          y: roadY - 120,
-          angle: 0,
-          speed: 0,
-          w: 80,
-          h: 40,
-          hp: 150,
-          maxHp: 150,
-          spec: spec,
-          driverId: null,
-          hornActive: false,
-          sirenActive: false
-        });
-      }
+    if (carConfig.bodyStyle === 'formula') {
+      bodyLength = 4.8;
+      bodyWidth = 1.6;
+      bodyHeight = 0.55;
+    } else if (carConfig.bodyStyle === 'buggy') {
+      bodyLength = 3.9;
+      bodyWidth = 2.1;
+      bodyHeight = 1.2;
     }
-  }
 
-  // Spawn Pickups around the map
-  const pickupTypes = ['health', 'armor', 'shotgun', 'ak47', 'rocket', 'ammo'];
-  for (let i = 0; i < 30; i++) {
-    const rx = 150 + Math.random() * (MAP_WIDTH - 300);
-    const ry = 150 + Math.random() * (MAP_HEIGHT - 300);
-    if (!checkBuildingCollision(rx, ry, 25)) {
-      pickups.push({
-        id: i + 1,
-        x: rx,
-        y: ry,
-        type: pickupTypes[i % pickupTypes.length],
-        active: true,
-        respawnTimer: 0
-      });
+    // 1. Asosiy kuzov (Chassis)
+    const chassisGeo = new THREE.BoxGeometry(bodyWidth, bodyHeight, bodyLength);
+    const chassisMesh = new THREE.Mesh(chassisGeo, bodyMat);
+    chassisMesh.position.y = bodyHeight / 2 + 0.35;
+    chassisMesh.castShadow = true;
+    chassisMesh.receiveShadow = true;
+    carGroup.add(chassisMesh);
+
+    // 2. Kabina va oynalar
+    if (carConfig.bodyStyle !== 'formula') {
+      const cabinGeo = new THREE.BoxGeometry(bodyWidth * 0.82, bodyHeight * 0.75, bodyLength * 0.45);
+      const cabinMesh = new THREE.Mesh(cabinGeo, glassMat);
+      cabinMesh.position.set(0, bodyHeight + 0.25, -0.2);
+      carGroup.add(cabinMesh);
+    } else {
+      // Formula Cockpit + Halo
+      const haloGeo = new THREE.TorusGeometry(0.35, 0.05, 8, 16, Math.PI);
+      const haloMesh = new THREE.Mesh(haloGeo, blackMat);
+      haloMesh.position.set(0, bodyHeight + 0.3, -0.1);
+      haloMesh.rotation.x = Math.PI / 2;
+      carGroup.add(haloMesh);
     }
-  }
-}
 
-// --- COLLISION LOGIC ---
-function checkBuildingCollision(x, y, radius = 20) {
-  for (const b of buildings) {
-    if (
-      x + radius > b.x &&
-      x - radius < b.x + b.w &&
-      y + radius > b.y &&
-      y - radius < b.y + b.h
-    ) {
-      return b;
+    // 3. Spoyler / Qanot
+    if (carConfig.bodyStyle === 'formula' || carConfig.bodyStyle === 'hyper' || carConfig.bodyStyle === 'muscle') {
+      const wingGeo = new THREE.BoxGeometry(bodyWidth * 1.05, 0.08, 0.5);
+      const wingMesh = new THREE.Mesh(wingGeo, blackMat);
+      wingMesh.position.set(0, bodyHeight + 0.55, -bodyLength / 2 + 0.2);
+
+      const standGeo = new THREE.BoxGeometry(0.08, 0.35, 0.1);
+      const standLeft = new THREE.Mesh(standGeo, blackMat);
+      standLeft.position.set(-0.6, bodyHeight + 0.35, -bodyLength / 2 + 0.2);
+      const standRight = new THREE.Mesh(standGeo, blackMat);
+      standRight.position.set(0.6, bodyHeight + 0.35, -bodyLength / 2 + 0.2);
+
+      carGroup.add(wingMesh);
+      carGroup.add(standLeft);
+      carGroup.add(standRight);
     }
-  }
-  return null;
-}
 
-// --- PLAYER CLASS ---
-class Player {
-  constructor(id, name, isLocal = false, color = '#ff0055') {
-    this.id = id;
-    this.name = name;
-    this.isLocal = isLocal;
-    this.color = color;
+    // 4. Old fara chiroqlari (Headlights)
+    const lightGeo = new THREE.BoxGeometry(0.35, 0.12, 0.08);
+    const leftLight = new THREE.Mesh(lightGeo, glowCyanMat);
+    leftLight.position.set(-bodyWidth / 2 + 0.3, bodyHeight / 2 + 0.4, bodyLength / 2 + 0.01);
+    const rightLight = new THREE.Mesh(lightGeo, glowCyanMat);
+    rightLight.position.set(bodyWidth / 2 - 0.3, bodyHeight / 2 + 0.4, bodyLength / 2 + 0.01);
+    carGroup.add(leftLight);
+    carGroup.add(rightLight);
 
-    this.x = 400;
-    this.y = 400;
-    this.angle = 0;
-    this.vx = 0;
-    this.vy = 0;
-    this.radius = 22;
+    // 5. Orqa stop-chiroqlar (Taillights)
+    const tailLightGeo = new THREE.BoxGeometry(0.4, 0.1, 0.08);
+    const leftTail = new THREE.Mesh(tailLightGeo, glowRedMat);
+    leftTail.position.set(-bodyWidth / 2 + 0.35, bodyHeight / 2 + 0.4, -bodyLength / 2 - 0.01);
+    const rightTail = new THREE.Mesh(tailLightGeo, glowRedMat);
+    rightTail.position.set(bodyWidth / 2 - 0.35, bodyHeight / 2 + 0.4, -bodyLength / 2 - 0.01);
+    carGroup.add(leftTail);
+    carGroup.add(rightTail);
 
-    this.hp = 100;
-    this.maxHp = 100;
-    this.armor = 50;
-    this.maxArmor = 100;
+    // 6. G'ildiraklar (4 ta aylantiriluvchi g'ildiraklar)
+    const wheelRadius = carConfig.bodyStyle === 'buggy' ? 0.52 : 0.42;
+    const wheelWidth = carConfig.bodyStyle === 'formula' ? 0.38 : 0.3;
+    const wheelGeo = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 16);
+    wheelGeo.rotateZ(Math.PI / 2);
 
-    this.currentWeapon = 'pistol';
-    this.weapons = {
-      fists: { ammo: Infinity },
-      pistol: { ammo: 60 },
-      shotgun: { ammo: 18 },
-      ak47: { ammo: 60 },
-      rocket: { ammo: 4 }
+    const wheels = [];
+    const wheelPositions = [
+      { x: -bodyWidth / 2 - 0.05, y: wheelRadius, z: bodyLength / 2 - 0.8, isFront: true },
+      { x: bodyWidth / 2 + 0.05, y: wheelRadius, z: bodyLength / 2 - 0.8, isFront: true },
+      { x: -bodyWidth / 2 - 0.05, y: wheelRadius, z: -bodyLength / 2 + 0.8, isFront: false },
+      { x: bodyWidth / 2 + 0.05, y: wheelRadius, z: -bodyLength / 2 + 0.8, isFront: false }
+    ];
+
+    wheelPositions.forEach((pos) => {
+      const wheelHub = new THREE.Group();
+      wheelHub.position.set(pos.x, pos.y, pos.z);
+
+      const tireMesh = new THREE.Mesh(wheelGeo, blackMat);
+      tireMesh.castShadow = true;
+      wheelHub.add(tireMesh);
+
+      const rimGeo = new THREE.CylinderGeometry(wheelRadius * 0.6, wheelRadius * 0.6, wheelWidth + 0.02, 8);
+      rimGeo.rotateZ(Math.PI / 2);
+      const rimMesh = new THREE.Mesh(rimGeo, rimMat);
+      wheelHub.add(rimMesh);
+
+      carGroup.add(wheelHub);
+      wheels.push({ group: wheelHub, mesh: tireMesh, isFront: pos.isFront });
+    });
+
+    // 7. Nitro Olov Chiqaruvchi Trubalar (Exhaust flame particles)
+    const exhaustGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.25, 8);
+    exhaustGeo.rotateX(Math.PI / 2);
+    const leftExhaust = new THREE.Mesh(exhaustGeo, blackMat);
+    leftExhaust.position.set(-0.35, 0.35, -bodyLength / 2 - 0.1);
+    const rightExhaust = new THREE.Mesh(exhaustGeo, blackMat);
+    rightExhaust.position.set(0.35, 0.35, -bodyLength / 2 - 0.1);
+    carGroup.add(leftExhaust);
+    carGroup.add(rightExhaust);
+
+    // Nitro olov alanga mesh
+    const flameMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff, transparent: true, opacity: 0 });
+    const flameGeo = new THREE.ConeGeometry(0.18, 0.7, 8);
+    flameGeo.rotateX(-Math.PI / 2);
+    const flameMesh = new THREE.Mesh(flameGeo, flameMat);
+    flameMesh.position.set(0, 0.35, -bodyLength / 2 - 0.45);
+    carGroup.add(flameMesh);
+
+    // Mashina obyektiga ichki havolalarni biriktiramiz
+    carGroup.userData = {
+      wheels,
+      flameMesh,
+      flameMat,
+      chassisMesh,
+      bodyMat,
+      config: carConfig
     };
 
-    this.inCarId = null;
-    this.isDead = false;
-    this.respawnTimer = 0;
-    this.score = 0;
-    this.isSprinting = false;
+    return carGroup;
   }
 
-  respawn(x, y) {
-    this.x = x || (200 + Math.random() * (MAP_WIDTH - 400));
-    this.y = y || (200 + Math.random() * (MAP_HEIGHT - 400));
-    while (checkBuildingCollision(this.x, this.y, 35)) {
-      this.x = 200 + Math.random() * (MAP_WIDTH - 400);
-      this.y = 200 + Math.random() * (MAP_HEIGHT - 400);
+  // -------------------------------------------------------------
+  // 6. GARAJ VA BOZOR KANVASI (3D TURNTABLE PREVIEW)
+  // -------------------------------------------------------------
+  let garageScene, garageCamera, garageRenderer, garageCarGroup;
+  let garageCurrentIdx = 0;
+
+  function initGarageViewer() {
+    const canvas = document.getElementById('garage-canvas');
+    if (!canvas) return;
+
+    garageScene = new THREE.Scene();
+    garageScene.background = new THREE.Color(0x0a0f1d);
+
+    const width = canvas.clientWidth || 400;
+    const height = canvas.clientHeight || 280;
+
+    garageCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+    garageCamera.position.set(5.5, 3.2, 5.5);
+    garageCamera.lookAt(0, 0.6, 0);
+
+    garageRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    garageRenderer.setSize(width, height);
+    garageRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // Yoritish
+    const ambLight = new THREE.AmbientLight(0xffffff, 0.8);
+    garageScene.add(ambLight);
+
+    const dirLight = new THREE.DirectionalLight(0x00f3ff, 1.2);
+    dirLight.position.set(5, 8, 5);
+    garageScene.add(dirLight);
+
+    const backLight = new THREE.DirectionalLight(0xb026ff, 0.8);
+    backLight.position.set(-5, 4, -5);
+    garageScene.add(backLight);
+
+    // Pol doirasi (Podium)
+    const platformGeo = new THREE.CylinderGeometry(3.2, 3.4, 0.2, 32);
+    const platformMat = new THREE.MeshStandardMaterial({
+      color: 0x141b2d,
+      roughness: 0.3,
+      metalness: 0.7
+    });
+    const platform = new THREE.Mesh(platformGeo, platformMat);
+    platform.position.y = -0.1;
+    garageScene.add(platform);
+
+    // Neon halqa
+    const ringGeo = new THREE.RingGeometry(3.1, 3.25, 32);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff, side: THREE.DoubleSide });
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    ringMesh.position.y = 0.01;
+    garageScene.add(ringMesh);
+
+    // Boshlang'ich tanlangan mashinani yuklash
+    garageCurrentIdx = CAR_CATALOG.findIndex(c => c.id === GameData.selectedCarId);
+    if (garageCurrentIdx < 0) garageCurrentIdx = 0;
+    updateGarageCar();
+
+    // Animatsiya tsikli
+    function animateGarage() {
+      requestAnimationFrame(animateGarage);
+      if (garageCarGroup) {
+        garageCarGroup.rotation.y += 0.012;
+      }
+      garageRenderer.render(garageScene, garageCamera);
     }
-    this.hp = 100;
-    this.armor = 50;
-    this.isDead = false;
-    this.inCarId = null;
-    this.vx = 0;
-    this.vy = 0;
-    showNotification(`${this.name} jangga qaytdi!`);
-    updateHudHealth();
+    animateGarage();
   }
 
-  takeDamage(amount, attackerName = '') {
-    if (this.isDead) return;
+  function updateGarageCar() {
+    const carConfig = CAR_CATALOG[garageCurrentIdx];
+    if (!carConfig) return;
 
-    if (this.armor > 0) {
-      const absorbed = Math.min(this.armor, amount * 0.7);
-      this.armor -= absorbed;
-      amount -= absorbed;
-    }
-    this.hp -= amount;
-
-    createBloodParticles(this.x, this.y);
-    sounds.playHit();
-
-    if (navigator.vibrate && this.isLocal) {
-      try { navigator.vibrate(80); } catch(e){}
+    if (garageCarGroup) {
+      garageScene.remove(garageCarGroup);
     }
 
-    if (this.isLocal) {
-      updateHudHealth();
-    }
+    const savedColor = GameData.carColors[carConfig.id] || carConfig.color;
+    garageCarGroup = create3DCarMesh(carConfig, savedColor);
+    garageScene.add(garageCarGroup);
 
-    if (this.hp <= 0) {
-      this.hp = 0;
-      this.isDead = true;
-      this.respawnTimer = 180; // 3 seconds at 60fps
+    // UI ma'lumotlarini yangilash
+    document.getElementById('preview-car-name').innerText = carConfig.name;
+    document.getElementById('preview-car-class').innerText = carConfig.carClass;
 
-      if (this.inCarId) {
-        exitCar(this);
-      }
+    // Stat bar qiymatlari (Upgradelarni hisobga olgan holda)
+    const isOwned = GameData.unlockedCars.includes(carConfig.id);
+    const isSelected = GameData.selectedCarId === carConfig.id;
 
-      const killer = attackerName || "Raqib";
-      addKillFeed(`${killer} ⚔️ ${this.name}`);
+    const speedBonus = isSelected ? (GameData.upgrades.engine - 1) * 15 : 0;
+    const accelBonus = isSelected ? (GameData.upgrades.accel - 1) * 0.3 : 0;
+    const handlingBonus = isSelected ? (GameData.upgrades.handling - 1) * 4 : 0;
+    const nitroBonus = isSelected ? (GameData.upgrades.nitro - 1) * 12 : 0;
 
-      if (this.isLocal) {
-        scores.remote++;
-        checkGameWin();
-      } else {
-        scores.local++;
-        checkGameWin();
-      }
-      updateHudScores();
-    }
-  }
+    const curSpeed = carConfig.baseSpeed + speedBonus;
+    const curAccel = Math.max(1.2, (carConfig.baseAccel - accelBonus)).toFixed(1);
+    const curHandling = Math.min(100, carConfig.baseHandling + handlingBonus);
+    const curNitro = carConfig.baseNitro + nitroBonus;
 
-  update() {
-    if (this.isDead) {
-      this.respawnTimer--;
-      if (this.respawnTimer <= 0 && this.isLocal) {
-        this.respawn();
-        if (peerConn && peerConn.open) {
-          peerConn.send({ type: 'respawn', x: this.x, y: this.y });
-        }
-      }
-      return;
-    }
+    document.getElementById('stat-speed-val').innerText = `${curSpeed} km/soat`;
+    document.getElementById('stat-speed-bar').style.width = `${Math.min(100, (curSpeed / 350) * 100)}%`;
 
-    if (this.inCarId) {
-      const car = cars.find(c => c.id === this.inCarId);
-      if (car) {
-        this.x = car.x;
-        this.y = car.y;
-        this.angle = car.angle;
-      } else {
-        this.inCarId = null;
-      }
-      return;
-    }
+    document.getElementById('stat-accel-val').innerText = `${curAccel} s`;
+    document.getElementById('stat-accel-bar').style.width = `${Math.min(100, ((4.5 - curAccel) / 3.0) * 100)}%`;
 
-    // Foot movement physics
-    let speed = this.isSprinting ? 6.2 : 4.0;
-    let dx = 0;
-    let dy = 0;
+    document.getElementById('stat-handling-val').innerText = `${curHandling}%`;
+    document.getElementById('stat-handling-bar').style.width = `${curHandling}%`;
 
-    if (this.isLocal) {
-      if (input.up) dy -= 1;
-      if (input.down) dy += 1;
-      if (input.left) dx -= 1;
-      if (input.right) dx += 1;
+    document.getElementById('stat-nitro-val').innerText = `${curNitro}%`;
+    document.getElementById('stat-nitro-bar').style.width = `${Math.min(100, (curNitro / 200) * 100)}%`;
 
-      if (dx !== 0 && dy !== 0) {
-        dx *= 0.7071;
-        dy *= 0.7071;
-      }
-
-      this.vx = dx * speed;
-      this.vy = dy * speed;
-
-      this.angle = input.aimAngle;
-    }
-
-    // Building Collision
-    const nextX = this.x + this.vx;
-    const nextY = this.y + this.vy;
-
-    if (!checkBuildingCollision(nextX, this.y, this.radius)) {
-      this.x = nextX;
-    }
-    if (!checkBuildingCollision(this.x, nextY, this.radius)) {
-      this.y = nextY;
-    }
-
-    this.x = Math.max(30, Math.min(MAP_WIDTH - 30, this.x));
-    this.y = Math.max(30, Math.min(MAP_HEIGHT - 30, this.y));
-
-    if (this.isLocal) {
-      checkPlayerPickups(this);
-    }
-  }
-
-  draw(context) {
-    if (this.isDead || this.inCarId) return;
-
-    context.save();
-    context.translate(this.x, this.y);
-    context.rotate(this.angle);
-
-    // Shadow
-    context.fillStyle = 'rgba(0,0,0,0.35)';
-    context.beginPath();
-    context.ellipse(3, 3, this.radius, this.radius * 0.85, 0, 0, Math.PI * 2);
-    context.fill();
-
-    // Weapon representation
-    const wSpec = WEAPONS[this.currentWeapon];
-    if (wSpec && !wSpec.isMelee) {
-      context.fillStyle = '#1e293b';
-      context.fillRect(8, 6, 24, 6);
-      if (this.currentWeapon === 'rocket') {
-        context.fillStyle = '#475569';
-        context.fillRect(4, 4, 30, 10);
-      }
-    }
-
-    // Arms
-    context.fillStyle = '#f6d8ae';
-    context.beginPath();
-    context.arc(14, 10, 5, 0, Math.PI * 2);
-    context.arc(14, -10, 5, 0, Math.PI * 2);
-    context.fill();
-
-    // Body / Shirt
-    context.fillStyle = this.color;
-    context.beginPath();
-    context.ellipse(0, 0, 16, 14, 0, 0, Math.PI * 2);
-    context.fill();
-    context.strokeStyle = '#fff';
-    context.lineWidth = 1.5;
-    context.stroke();
-
-    // Head
-    context.fillStyle = '#f6d8ae';
-    context.beginPath();
-    context.arc(0, 0, 9, 0, Math.PI * 2);
-    context.fill();
-
-    // Cap / Hair
-    context.fillStyle = '#111827';
-    context.beginPath();
-    context.arc(-2, 0, 8, -Math.PI / 2, Math.PI / 2);
-    context.fill();
-
-    context.restore();
-
-    this.drawNameTag(context);
-  }
-
-  drawNameTag(context) {
-    if (this.isDead || this.inCarId) return;
-    context.save();
-    context.font = 'bold 12px sans-serif';
-    context.textAlign = 'center';
-
-    context.fillStyle = '#fff';
-    context.shadowColor = '#000';
-    context.shadowBlur = 4;
-    context.fillText(this.name, this.x, this.y - 32);
-
-    const barW = 40;
-    const barH = 5;
-    const barX = this.x - barW / 2;
-    const barY = this.y - 28;
-
-    context.shadowBlur = 0;
-    context.fillStyle = 'rgba(0,0,0,0.6)';
-    context.fillRect(barX, barY, barW, barH);
-
-    const hpPercent = Math.max(0, this.hp / this.maxHp);
-    context.fillStyle = hpPercent > 0.5 ? '#2ecc71' : hpPercent > 0.25 ? '#f39c12' : '#e74c3c';
-    context.fillRect(barX, barY, barW * hpPercent, barH);
-
-    if (this.armor > 0) {
-      context.fillStyle = '#3498db';
-      context.fillRect(barX, barY - 4, barW * (this.armor / this.maxArmor), 2.5);
-    }
-
-    context.restore();
-  }
-}
-
-// --- CAR CLASS / HANDLING ---
-function updateCar(car) {
-  const driver = getCarDriver(car);
-
-  if (driver && driver.isLocal) {
-    const spec = car.spec;
-    const isAccelerating = input.up;
-    const isReversing = input.down;
-    const isSteeringLeft = input.left;
-    const isSteeringRight = input.right;
-
-    if (isAccelerating) {
-      car.speed = Math.min(car.speed + spec.accel, spec.topSpeed);
-    } else if (isReversing) {
-      car.speed = Math.max(car.speed - spec.accel * 0.7, -4.5);
+    // Tanlash yoki Sotib olish tugmasi
+    const actionBtn = document.getElementById('btn-car-action');
+    if (isSelected) {
+      actionBtn.innerText = '✓ TANLANGAN';
+      actionBtn.className = 'btn btn-primary';
+      actionBtn.disabled = true;
+    } else if (isOwned) {
+      actionBtn.innerText = 'BU MASHINANI TANLASH';
+      actionBtn.className = 'btn btn-primary';
+      actionBtn.disabled = false;
     } else {
-      car.speed *= 0.95;
-      if (Math.abs(car.speed) < 0.05) car.speed = 0;
+      actionBtn.innerText = `SOTIB OLISH ($${carConfig.price.toLocaleString()})`;
+      actionBtn.className = 'btn btn-gold';
+      actionBtn.disabled = GameData.coins < carConfig.price;
     }
 
-    // Steering
-    if (Math.abs(car.speed) > 0.3) {
-      const dir = car.speed > 0 ? 1 : -1;
-      if (isSteeringLeft) car.angle -= spec.turnSpeed * dir;
-      if (isSteeringRight) car.angle += spec.turnSpeed * dir;
-    }
-
-    // Handbrake / Drift
-    if (input.sprint && Math.abs(car.speed) > 4) {
-      car.speed *= 0.96;
-      createSkidMark(car);
-    }
-
-    // Sound engine rumble
-    sounds.updateEngineSound(Math.abs(car.speed) > 0.3, Math.abs(car.speed) / spec.topSpeed);
-
-    const vx = Math.cos(car.angle) * car.speed;
-    const vy = Math.sin(car.angle) * car.speed;
-
-    const nextX = car.x + vx;
-    const nextY = car.y + vy;
-
-    // Building Collision
-    const hitB = checkBuildingCollision(nextX, nextY, 32);
-    if (hitB) {
-      if (Math.abs(car.speed) > 4) {
-        sounds.playCarCrash();
-        createExplosionParticles(car.x, car.y, 8);
-        car.hp -= Math.floor(Math.abs(car.speed) * 3);
-        if (navigator.vibrate) {
-          try { navigator.vibrate(100); } catch(e){}
-        }
-      }
-      car.speed = -car.speed * 0.4;
-    } else {
-      car.x = nextX;
-      car.y = nextY;
-    }
-
-    car.x = Math.max(40, Math.min(MAP_WIDTH - 40, car.x));
-    car.y = Math.max(40, Math.min(MAP_HEIGHT - 40, car.y));
-
-    // Ramming opponent player on foot
-    const opponent = isBotMatch ? botPlayer : remotePlayer;
-    if (opponent && !opponent.isDead && !opponent.inCarId && Math.abs(car.speed) > 4.5) {
-      const dist = Math.hypot(opponent.x - car.x, opponent.y - car.y);
-      if (dist < 45) {
-        const ramDamage = Math.floor(Math.abs(car.speed) * 6);
-        opponent.takeDamage(ramDamage, driver.name + " (Moshina urishi)");
-        sounds.playCarCrash();
-        if (peerConn && peerConn.open) {
-          peerConn.send({ type: 'hit', targetId: opponent.id, damage: ramDamage, attacker: driver.name });
-        }
-      }
-    }
-
-    // Car destruction
-    if (car.hp <= 0 && !car.isExploded) {
-      car.isExploded = true;
-      sounds.playExplosion();
-      createExplosionParticles(car.x, car.y, 40);
-      driver.takeDamage(75, "Moshina Portlashi");
-      exitCar(driver);
-    }
-  } else if (!driver) {
-    car.speed *= 0.9;
-    if (Math.abs(car.speed) < 0.05) car.speed = 0;
-  }
-}
-
-function getCarDriver(car) {
-  if (localPlayer && localPlayer.inCarId === car.id) return localPlayer;
-  if (remotePlayer && remotePlayer.inCarId === car.id) return remotePlayer;
-  if (botPlayer && botPlayer.inCarId === car.id) return botPlayer;
-  return null;
-}
-
-function createSkidMark(car) {
-  if (Math.random() > 0.4) return;
-  skidmarks.push({
-    x: car.x,
-    y: car.y,
-    angle: car.angle,
-    alpha: 0.55
-  });
-  if (skidmarks.length > 250) {
-    skidmarks.shift();
-  }
-}
-
-function drawCar(context, car) {
-  context.save();
-  context.translate(car.x, car.y);
-  context.rotate(car.angle);
-
-  // Shadow
-  context.fillStyle = 'rgba(0,0,0,0.45)';
-  context.fillRect(-car.w / 2 + 5, -car.h / 2 + 5, car.w, car.h);
-
-  // Wheels
-  context.fillStyle = '#111';
-  context.fillRect(-car.w / 2 + 10, -car.h / 2 - 4, 16, 6);
-  context.fillRect(car.w / 2 - 26, -car.h / 2 - 4, 16, 6);
-  context.fillRect(-car.w / 2 + 10, car.h / 2 - 2, 16, 6);
-  context.fillRect(car.w / 2 - 26, car.h / 2 - 2, 16, 6);
-
-  // Body
-  context.fillStyle = car.spec.color;
-  context.beginPath();
-  context.roundRect(-car.w / 2, -car.h / 2, car.w, car.h, 8);
-  context.fill();
-  context.strokeStyle = '#1e293b';
-  context.lineWidth = 1.5;
-  context.stroke();
-
-  // Roof & Windshield
-  context.fillStyle = '#0f172a';
-  context.beginPath();
-  context.roundRect(-car.w / 4, -car.h / 2 + 5, car.w / 2, car.h - 10, 4);
-  context.fill();
-
-  context.fillStyle = '#38bdf8';
-  context.fillRect(car.w / 6, -car.h / 2 + 7, 7, car.h - 14);
-  context.fillRect(-car.w / 4 - 3, -car.h / 2 + 7, 5, car.h - 14);
-
-  // Headlights
-  if (Math.abs(car.speed) > 0.1 || getCarDriver(car)) {
-    context.fillStyle = 'rgba(255, 255, 200, 0.4)';
-    context.beginPath();
-    context.moveTo(car.w / 2, -12);
-    context.lineTo(car.w / 2 + 120, -45);
-    context.lineTo(car.w / 2 + 120, 45);
-    context.lineTo(car.w / 2, 12);
-    context.closePath();
-    context.fill();
-
-    if (car.speed < 0 || input.down) {
-      context.fillStyle = 'rgba(255, 0, 0, 0.7)';
-      context.fillRect(-car.w / 2 - 4, -car.h / 2 + 4, 5, 8);
-      context.fillRect(-car.w / 2 - 4, car.h / 2 - 12, 5, 8);
-    }
+    renderGarageThumbnails();
+    renderColorSwatches();
+    updateUpgradeButtons();
   }
 
-  // Police Siren Flash
-  if (car.spec.isPolice && getCarDriver(car)) {
-    const flash = Math.floor(Date.now() / 150) % 2 === 0;
-    context.fillStyle = flash ? '#ef4444' : '#3b82f6';
-    context.beginPath();
-    context.arc(0, 0, 7, 0, Math.PI * 2);
-    context.fill();
-  }
+  function renderGarageThumbnails() {
+    const container = document.getElementById('garage-thumbs-container');
+    if (!container) return;
+    container.innerHTML = '';
 
-  context.restore();
+    CAR_CATALOG.forEach((car, idx) => {
+      const isOwned = GameData.unlockedCars.includes(car.id);
+      const isSelected = idx === garageCurrentIdx;
 
-  // Floating Driver Badge & Car Health
-  const driver = getCarDriver(car);
-  if (driver) {
-    context.save();
-    context.font = 'bold 12px sans-serif';
-    context.textAlign = 'center';
-    context.fillStyle = '#ffb703';
-    context.shadowColor = '#000';
-    context.shadowBlur = 4;
-    context.fillText(`🚗 ${driver.name} [${car.spec.name}]`, car.x, car.y - 36);
-
-    const barW = 48;
-    const barH = 5;
-    context.fillStyle = 'rgba(0,0,0,0.6)';
-    context.fillRect(car.x - barW / 2, car.y - 30, barW, barH);
-    context.fillStyle = '#f59e0b';
-    context.fillRect(car.x - barW / 2, car.y - 30, barW * (car.hp / car.maxHp), barH);
-    context.restore();
-  }
-}
-
-// --- CAR ENTRY / EXIT ---
-function toggleCarEntry(player) {
-  if (player.inCarId) {
-    exitCar(player);
-  } else {
-    let closestCar = null;
-    let minDist = 80;
-    for (const car of cars) {
-      if (getCarDriver(car) === null) {
-        const d = Math.hypot(car.x - player.x, car.y - player.y);
-        if (d < minDist) {
-          minDist = d;
-          closestCar = car;
-        }
-      }
-    }
-
-    if (closestCar) {
-      player.inCarId = closestCar.id;
-      closestCar.driverId = player.id;
-      sounds.playCarHorn();
-      showNotification(`${closestCar.spec.name} ga mindingiz!`);
-
-      if (peerConn && peerConn.open) {
-        peerConn.send({ type: 'carEnter', playerId: player.id, carId: closestCar.id });
-      }
-    }
-  }
-}
-
-function exitCar(player) {
-  if (!player.inCarId) return;
-  const car = cars.find(c => c.id === player.inCarId);
-  if (car) {
-    car.driverId = null;
-    player.x = car.x + Math.cos(car.angle + Math.PI / 2) * 45;
-    player.y = car.y + Math.sin(car.angle + Math.PI / 2) * 45;
-    if (checkBuildingCollision(player.x, player.y, player.radius)) {
-      player.x = car.x;
-      player.y = car.y;
-    }
-  }
-  const oldCarId = player.inCarId;
-  player.inCarId = null;
-
-  sounds.updateEngineSound(false, 0);
-
-  if (peerConn && peerConn.open) {
-    peerConn.send({ type: 'carExit', playerId: player.id, carId: oldCarId });
-  }
-}
-
-// --- WEAPONS & COMBAT ---
-function shootWeapon(player) {
-  if (player.isDead) return;
-
-  const wKey = player.currentWeapon;
-  const w = WEAPONS[wKey];
-  const now = performance.now();
-
-  if (now - lastShootTime < w.fireRate) return;
-  if (w.ammo !== Infinity && player.weapons[wKey].ammo <= 0) {
-    showNotification("O'q tugadi! Qurol almashtiring.");
-    return;
-  }
-
-  lastShootTime = now;
-
-  if (w.ammo !== Infinity) {
-    player.weapons[wKey].ammo--;
-    updateHudWeapon();
-  }
-
-  const spawnDist = player.inCarId ? 45 : 28;
-  const muzzleX = player.x + Math.cos(player.angle) * spawnDist;
-  const muzzleY = player.y + Math.sin(player.angle) * spawnDist;
-
-  if (w.isMelee) {
-    sounds.playPunch();
-    createPunchImpact(muzzleX, muzzleY, player.angle);
-
-    const target = isBotMatch ? botPlayer : remotePlayer;
-    if (target && !target.isDead) {
-      const d = Math.hypot(target.x - muzzleX, target.y - muzzleY);
-      if (d < w.range) {
-        target.takeDamage(w.damage, player.name);
-        if (peerConn && peerConn.open) {
-          peerConn.send({ type: 'hit', targetId: target.id, damage: w.damage, attacker: player.name });
-        }
-      }
-    }
-  } else if (wKey === 'shotgun') {
-    sounds.playShoot('shotgun');
-    for (let i = 0; i < w.pellets; i++) {
-      const spreadAngle = player.angle + (Math.random() - 0.5) * w.spread;
-      spawnBullet(muzzleX, muzzleY, spreadAngle, wKey, player.id);
-    }
-  } else if (wKey === 'rocket') {
-    sounds.playShoot('rocket');
-    spawnBullet(muzzleX, muzzleY, player.angle, wKey, player.id);
-  } else {
-    sounds.playShoot(wKey);
-    spawnBullet(muzzleX, muzzleY, player.angle, wKey, player.id);
-  }
-
-  if (peerConn && peerConn.open) {
-    peerConn.send({
-      type: 'shoot',
-      weapon: wKey,
-      x: muzzleX,
-      y: muzzleY,
-      angle: player.angle,
-      shooterId: player.id
+      const card = document.createElement('div');
+      card.className = `car-thumb-card ${isSelected ? 'active' : ''}`;
+      card.innerHTML = `
+        <span style="font-size: 1.2rem;">${isOwned ? '🏎️' : '🔒'}</span>
+        <span class="car-thumb-name">${car.name}</span>
+      `;
+      card.addEventListener('click', () => {
+        garageCurrentIdx = idx;
+        updateGarageCar();
+      });
+      container.appendChild(card);
     });
   }
-}
 
-function spawnBullet(x, y, angle, weaponKey, ownerId) {
-  const w = WEAPONS[weaponKey];
-  bullets.push({
-    x: x,
-    y: y,
-    vx: Math.cos(angle) * w.bulletSpeed,
-    vy: Math.sin(angle) * w.bulletSpeed,
-    angle: angle,
-    distanceTraveled: 0,
-    maxRange: w.range,
-    damage: w.damage,
-    weaponKey: weaponKey,
-    ownerId: ownerId,
-    isRocket: !!w.isRocket
-  });
-}
+  function renderColorSwatches() {
+    const container = document.getElementById('car-color-swatches');
+    if (!container) return;
+    container.innerHTML = '';
 
-function updateBullets() {
-  for (let i = bullets.length - 1; i >= 0; i--) {
-    const b = bullets[i];
-    b.x += b.vx;
-    b.y += b.vy;
-    b.distanceTraveled += Math.hypot(b.vx, b.vy);
+    const carConfig = CAR_CATALOG[garageCurrentIdx];
+    const currentColor = GameData.carColors[carConfig.id] || carConfig.color;
 
-    if (b.isRocket) {
-      particles.push({
-        x: b.x - Math.cos(b.angle) * 10,
-        y: b.y - Math.sin(b.angle) * 10,
-        vx: (Math.random() - 0.5) * 1.5,
-        vy: (Math.random() - 0.5) * 1.5,
-        radius: 4 + Math.random() * 4,
-        alpha: 0.6,
-        color: '#94a3b8',
-        life: 25
+    COLOR_PALETTE.forEach(color => {
+      const swatch = document.createElement('div');
+      swatch.className = `color-swatch ${color.toLowerCase() === currentColor.toLowerCase() ? 'active' : ''}`;
+      swatch.style.backgroundColor = color;
+      swatch.addEventListener('click', () => {
+        GameData.carColors[carConfig.id] = color;
+        GameData.save();
+        if (garageCarGroup && garageCarGroup.userData.bodyMat) {
+          garageCarGroup.userData.bodyMat.color.set(color);
+        }
+        renderColorSwatches();
+        showToast(`Mashina rangi yangilandi!`);
+      });
+      container.appendChild(swatch);
+    });
+  }
+
+  function updateUpgradeButtons() {
+    const upgradeCosts = {
+      engine: GameData.upgrades.engine * 500,
+      accel: GameData.upgrades.accel * 500,
+      handling: GameData.upgrades.handling * 400,
+      nitro: GameData.upgrades.nitro * 600
+    };
+
+    const maxLevel = 5;
+
+    ['engine', 'accel', 'handling', 'nitro'].forEach(type => {
+      const btn = document.getElementById(`btn-up-${type}`);
+      const costEl = document.getElementById(`cost-up-${type}`);
+      if (!btn || !costEl) return;
+
+      const lvl = GameData.upgrades[type];
+      if (lvl >= maxLevel) {
+        costEl.innerText = 'MAKS (MAX)';
+        btn.disabled = true;
+      } else {
+        const cost = upgradeCosts[type];
+        costEl.innerText = `$${cost}`;
+        btn.disabled = GameData.coins < cost;
+      }
+    });
+  }
+
+  // -------------------------------------------------------------
+  // 7. ZONALAR VA XARITALAR KARTALARI
+  // -------------------------------------------------------------
+  function renderZonesSelection() {
+    const container = document.getElementById('zones-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    ZONES.forEach(zone => {
+      const isSelected = zone.id === GameData.selectedZoneId;
+      const card = document.createElement('div');
+      card.className = `zone-card ${zone.cssClass} ${isSelected ? 'active' : ''}`;
+      card.innerHTML = `
+        <div class="zone-card-content">
+          <span class="zone-badge">${zone.badge}</span>
+          <h3 class="zone-title">${zone.name}</h3>
+          <p class="zone-desc">${zone.desc}</p>
+        </div>
+      `;
+      card.addEventListener('click', () => {
+        GameData.selectedZoneId = zone.id;
+        GameData.save();
+        renderZonesSelection();
+        showToast(`Tanlangan zona: ${zone.name}`);
+        setTimeout(() => closeModal('zones-modal'), 300);
+      });
+      container.appendChild(card);
+    });
+  }
+
+  // -------------------------------------------------------------
+  // 8. 3D TRASSA YARATISH MOTORASI (CIRCUIT, PROPS, COINS, BOOSTS)
+  // -------------------------------------------------------------
+  class RaceTrackManager {
+    constructor(scene, zoneConfig) {
+      this.scene = scene;
+      this.zone = zoneConfig;
+      this.curve = null;
+      this.trackMesh = null;
+      this.curbsMesh = null;
+      this.coins = [];
+      this.boostPads = [];
+      this.environmentProps = [];
+      this.trackPointsCount = 200;
+      this.trackWidth = 14;
+      this.totalLength = 0;
+      this.generateCircuit();
+    }
+
+    generateCircuit() {
+      // Trassa egri chiziq nazorat nuqtalari (To'liq tekis, qat'iy yer sathidagi yo'l)
+      const points = [
+        new THREE.Vector3(0, 0, -250),
+        new THREE.Vector3(120, 0, -200),
+        new THREE.Vector3(220, 0, -100),
+        new THREE.Vector3(260, 0, 40),
+        new THREE.Vector3(200, 0, 180),
+        new THREE.Vector3(90, 0, 260),
+        new THREE.Vector3(-60, 0, 270),
+        new THREE.Vector3(-180, 0, 200),
+        new THREE.Vector3(-250, 0, 80),
+        new THREE.Vector3(-270, 0, -80),
+        new THREE.Vector3(-180, 0, -220),
+        new THREE.Vector3(-70, 0, -260)
+      ];
+
+      this.curve = new THREE.CatmullRomCurve3(points, true);
+      this.curve.curveType = 'catmullrom';
+      this.curve.tension = 0.5;
+      this.totalLength = this.curve.getLength();
+
+      this.buildRoadMesh();
+      this.buildStartFinishArch();
+      this.spawnBoostPads();
+      this.spawnCoins();
+      this.buildEnvironment();
+    }
+
+    buildRoadMesh() {
+      const segments = this.trackPointsCount;
+      const roadGeo = new THREE.BufferGeometry();
+      const vertices = [];
+      const uvs = [];
+      const indices = [];
+
+      const leftCurbsVerts = [];
+      const rightCurbsVerts = [];
+      const curbIndices = [];
+
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const pt = this.curve.getPointAt(t);
+        const tangent = this.curve.getTangentAt(t).normalize();
+        const up = new THREE.Vector3(0, 1, 0);
+        const normal = new THREE.Vector3().crossVectors(tangent, up).normalize();
+
+        const halfW = this.trackWidth / 2;
+
+        const leftPos = new THREE.Vector3().copy(pt).addScaledVector(normal, -halfW);
+        const rightPos = new THREE.Vector3().copy(pt).addScaledVector(normal, halfW);
+
+        vertices.push(leftPos.x, 0.04, leftPos.z);
+        vertices.push(rightPos.x, 0.04, rightPos.z);
+
+        uvs.push(0, t * 40);
+        uvs.push(1, t * 40);
+
+        if (i < segments) {
+          const base = i * 2;
+          indices.push(base, base + 1, base + 2);
+          indices.push(base + 1, base + 3, base + 2);
+        }
+
+        // Yon bordyurlar
+        const curbW = 1.2;
+        const curbLeftInner = leftPos;
+        const curbLeftOuter = new THREE.Vector3().copy(pt).addScaledVector(normal, -halfW - curbW);
+        leftCurbsVerts.push(curbLeftOuter.x, 0.12, curbLeftOuter.z);
+        leftCurbsVerts.push(curbLeftInner.x, 0.05, curbLeftInner.z);
+
+        const curbRightInner = rightPos;
+        const curbRightOuter = new THREE.Vector3().copy(pt).addScaledVector(normal, halfW + curbW);
+        rightCurbsVerts.push(curbRightInner.x, 0.05, curbRightInner.z);
+        rightCurbsVerts.push(curbRightOuter.x, 0.12, curbRightOuter.z);
+      }
+
+      roadGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      roadGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      roadGeo.setIndex(indices);
+      roadGeo.computeVertexNormals();
+
+      const roadMat = new THREE.MeshStandardMaterial({
+        color: this.zone.roadColor,
+        roughness: 0.6,
+        metalness: 0.2
+      });
+
+      this.trackMesh = new THREE.Mesh(roadGeo, roadMat);
+      this.trackMesh.receiveShadow = true;
+      this.scene.add(this.trackMesh);
+
+      // Bordyurlar
+      const curbGeo = new THREE.BufferGeometry();
+      const allCurbVerts = leftCurbsVerts.concat(rightCurbsVerts);
+      curbGeo.setAttribute('position', new THREE.Float32BufferAttribute(allCurbVerts, 3));
+
+      for (let i = 0; i < segments; i++) {
+        const base = i * 2;
+        curbIndices.push(base, base + 1, base + 2);
+        curbIndices.push(base + 1, base + 3, base + 2);
+      }
+      const offset = (segments + 1) * 2;
+      for (let i = 0; i < segments; i++) {
+        const base = offset + i * 2;
+        curbIndices.push(base, base + 1, base + 2);
+        curbIndices.push(base + 1, base + 3, base + 2);
+      }
+      curbGeo.setIndex(curbIndices);
+      curbGeo.computeVertexNormals();
+
+      const curbMat = new THREE.MeshStandardMaterial({
+        color: this.zone.curbColor,
+        roughness: 0.4,
+        emissive: this.zone.curbColor,
+        emissiveIntensity: 0.2
+      });
+
+      this.curbsMesh = new THREE.Mesh(curbGeo, curbMat);
+      this.scene.add(this.curbsMesh);
+    }
+
+    buildStartFinishArch() {
+      const startPt = this.curve.getPointAt(0);
+      const tangent = this.curve.getTangentAt(0).normalize();
+      const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+
+      const archGroup = new THREE.Group();
+      const postGeo = new THREE.BoxGeometry(0.8, 8, 0.8);
+      const postMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 });
+
+      const leftPost = new THREE.Mesh(postGeo, postMat);
+      leftPost.position.copy(startPt).addScaledVector(normal, -this.trackWidth / 2 - 1);
+      leftPost.position.y += 4;
+
+      const rightPost = new THREE.Mesh(postGeo, postMat);
+      rightPost.position.copy(startPt).addScaledVector(normal, this.trackWidth / 2 + 1);
+      rightPost.position.y += 4;
+
+      const crossGeo = new THREE.BoxGeometry(this.trackWidth + 3, 1.2, 1.2);
+      const crossMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+      const crossbar = new THREE.Mesh(crossGeo, crossMat);
+      crossbar.position.copy(startPt);
+      crossbar.position.y += 8;
+      crossbar.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), normal);
+
+      archGroup.add(leftPost);
+      archGroup.add(rightPost);
+      archGroup.add(crossbar);
+      this.scene.add(archGroup);
+    }
+
+    spawnBoostPads() {
+      const padPositions = [0.15, 0.42, 0.68, 0.88];
+      const padGeo = new THREE.PlaneGeometry(5, 3);
+      padGeo.rotateX(-Math.PI / 2);
+      const padMat = new THREE.MeshBasicMaterial({
+        color: 0x00ff88,
+        side: THREE.DoubleSide
+      });
+
+      padPositions.forEach(t => {
+        const pt = this.curve.getPointAt(t);
+        const tangent = this.curve.getTangentAt(t).normalize();
+        const padMesh = new THREE.Mesh(padGeo, padMat);
+        padMesh.position.copy(pt);
+        padMesh.position.y += 0.08;
+        padMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tangent);
+        this.scene.add(padMesh);
+        this.boostPads.push({ mesh: padMesh, t });
       });
     }
 
-    if (checkBuildingCollision(b.x, b.y, 6)) {
-      if (b.isRocket) {
-        triggerRocketExplosion(b.x, b.y, b.ownerId);
+    spawnCoins() {
+      const coinGeo = new THREE.CylinderGeometry(0.8, 0.8, 0.2, 16);
+      coinGeo.rotateX(Math.PI / 2);
+      const coinMat = new THREE.MeshStandardMaterial({
+        color: 0xffbe0b,
+        metalness: 0.9,
+        roughness: 0.1,
+        emissive: 0xffbe0b,
+        emissiveIntensity: 0.3
+      });
+
+      for (let i = 1; i < 35; i++) {
+        const t = (i / 35);
+        const pt = this.curve.getPointAt(t);
+        const tangent = this.curve.getTangentAt(t).normalize();
+        const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+        const laneOffset = Math.sin(i * 1.5) * (this.trackWidth * 0.3);
+
+        const coinMesh = new THREE.Mesh(coinGeo, coinMat);
+        coinMesh.position.copy(pt).addScaledVector(normal, laneOffset);
+        coinMesh.position.y += 1.2;
+        this.scene.add(coinMesh);
+        this.coins.push({ mesh: coinMesh, collected: false });
+      }
+    }
+
+    buildEnvironment() {
+      // Zona turiga mos dekoratsiyalar (Osmono'par binolar, daraxtlar, qoyalar, vulqonlar)
+      const count = 45;
+      for (let i = 0; i < count; i++) {
+        const t = (i / count);
+        const pt = this.curve.getPointAt(t);
+        const tangent = this.curve.getTangentAt(t).normalize();
+        const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+        const side = i % 2 === 0 ? 1 : -1;
+        const dist = 22 + Math.random() * 40;
+
+        const propPos = new THREE.Vector3().copy(pt).addScaledVector(normal, side * dist);
+
+        if (this.zone.id === 'cyber') {
+          // Kiber binolar
+          const h = 25 + Math.random() * 50;
+          const w = 10 + Math.random() * 14;
+          const bGeo = new THREE.BoxGeometry(w, h, w);
+          const bMat = new THREE.MeshStandardMaterial({
+            color: 0x090d18,
+            roughness: 0.2,
+            metalness: 0.8
+          });
+          const building = new THREE.Mesh(bGeo, bMat);
+          building.position.set(propPos.x, h / 2, propPos.z);
+          this.scene.add(building);
+        } else if (this.zone.id === 'snow' || this.zone.id === 'forest') {
+          // Archalar va daraxtlar
+          const treeGroup = new THREE.Group();
+          const trunkGeo = new THREE.CylinderGeometry(0.6, 0.9, 3, 8);
+          const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a2e18 });
+          const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+          trunk.position.y = 1.5;
+          treeGroup.add(trunk);
+
+          const foliageColor = this.zone.id === 'snow' ? 0xd0e8f2 : 0x1b4332;
+          const foliageGeo = new THREE.ConeGeometry(3.5, 7, 8);
+          const foliageMat = new THREE.MeshStandardMaterial({ color: foliageColor });
+          const foliage = new THREE.Mesh(foliageGeo, foliageMat);
+          foliage.position.y = 6;
+          treeGroup.add(foliage);
+
+          treeGroup.position.set(propPos.x, propPos.y, propPos.z);
+          this.scene.add(treeGroup);
+        } else if (this.zone.id === 'desert') {
+          // Qum piramidalari va qoyalar
+          const rockGeo = new THREE.ConeGeometry(12, 16, 4);
+          const rockMat = new THREE.MeshStandardMaterial({ color: 0xb5651d, roughness: 0.9 });
+          const rock = new THREE.Mesh(rockGeo, rockMat);
+          rock.position.set(propPos.x, 8, propPos.z);
+          this.scene.add(rock);
+        } else if (this.zone.id === 'volcano') {
+          // Vulqon qoyalari
+          const vGeo = new THREE.DodecahedronGeometry(8 + Math.random() * 8, 1);
+          const vMat = new THREE.MeshStandardMaterial({
+            color: 0x1b0a0a,
+            emissive: 0xff3b30,
+            emissiveIntensity: 0.15
+          });
+          const vMesh = new THREE.Mesh(vGeo, vMat);
+          vMesh.position.set(propPos.x, 4, propPos.z);
+          this.scene.add(vMesh);
+        }
+      }
+    }
+
+    update(delta) {
+      // Tangalarni aylantirish
+      this.coins.forEach(c => {
+        if (!c.collected && c.mesh) {
+          c.mesh.rotation.z += 2.5 * delta;
+        }
+      });
+    }
+
+    getClosestTrackPoint(pos) {
+      // Mashinaning trassaga nisbatan t progressini hisoblash
+      let closestT = 0;
+      let minDistSq = Infinity;
+      const steps = 150;
+      for (let i = 0; i < steps; i++) {
+        const t = i / steps;
+        const pt = this.curve.getPointAt(t);
+        const distSq = pt.distanceToSquared(pos);
+        if (distSq < minDistSq) {
+          minDistSq = distSq;
+          closestT = t;
+        }
+      }
+      return { t: closestT, dist: Math.sqrt(minDistSq) };
+    }
+  }
+
+  // -------------------------------------------------------------
+  // 9. O'YINCHI VA BOTLAR MASHINASI SINF (VEHICLE CONTROLLER)
+  // -------------------------------------------------------------
+  class VehicleEntity {
+    constructor(id, name, carConfig, isHuman, scene, trackManager, startGridIndex) {
+      this.id = id;
+      this.name = name;
+      this.carConfig = carConfig;
+      this.isHuman = isHuman;
+      this.scene = scene;
+      this.track = trackManager;
+      this.gridIndex = startGridIndex;
+
+      this.speed = 0; // m/s
+      this.maxSpeed = (carConfig.baseSpeed / 3.6); // m/s ga o'tkazamiz
+      this.acceleration = carConfig.baseAccel;
+      this.handling = carConfig.baseHandling;
+      this.nitroPower = carConfig.baseNitro;
+
+      this.nitroGauge = 100;
+      this.isNitroActive = false;
+      this.isDrifting = false;
+      this.driftPoints = 0;
+
+      this.trackProgress = 0; // 0..1
+      this.lap = 1;
+      this.maxLaps = 3;
+      this.finished = false;
+      this.finishTime = 0;
+
+      // Bot boshqaruv o'zgaruvchilari
+      this.botLaneOffset = (Math.random() - 0.5) * 6;
+      this.botTargetT = 0;
+      this.botNitroCooldown = 5 + Math.random() * 8;
+
+      // Mashina 3D modelini yaratamiz
+      const color = isHuman ? (GameData.carColors[carConfig.id] || carConfig.color) : carConfig.color;
+      this.mesh = create3DCarMesh(carConfig, color);
+      this.scene.add(this.mesh);
+
+      this.placeOnStartGrid();
+    }
+
+    placeOnStartGrid() {
+      // 12 ta start katakchasiga joylashtirish (qat'iy yo'l ustida)
+      const startT = 0.005 - (this.gridIndex * 0.006);
+      const normT = (startT + 1) % 1;
+      const pt = this.track.curve.getPointAt(normT);
+      const tangent = this.track.curve.getTangentAt(normT).normalize();
+      const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+
+      const laneSide = this.gridIndex % 2 === 0 ? -2.8 : 2.8;
+      this.mesh.position.set(pt.x + normal.x * laneSide, 0, pt.z + normal.z * laneSide);
+      
+      const flatTangent = new THREE.Vector3(tangent.x, 0, tangent.z).normalize();
+      this.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), flatTangent);
+      this.mesh.rotation.x = 0;
+      this.mesh.rotation.z = 0;
+
+      this.trackProgress = normT;
+    }
+
+    update(delta, inputState) {
+      if (this.finished) return;
+
+      if (this.isHuman) {
+        this.updateHumanPhysics(delta, inputState);
       } else {
-        createSparkParticles(b.x, b.y);
+        this.updateBotAI(delta);
       }
-      bullets.splice(i, 1);
-      continue;
+
+      // G'ildiraklarni aylantirish
+      const forwardDist = this.speed * delta;
+      if (this.mesh.userData && this.mesh.userData.wheels) {
+        this.mesh.userData.wheels.forEach(w => {
+          w.mesh.rotation.x -= forwardDist * 2.2;
+          if (w.isFront) {
+            // Rul burilganda old g'ildiraklar burchagi
+            const steerAngle = this.isHuman ? (inputState.steer * 0.45) : (this.botSteer || 0);
+            w.group.rotation.y = steerAngle;
+          }
+        });
+      }
+
+      // Nitro olovini yangilash
+      if (this.mesh.userData && this.mesh.userData.flameMat) {
+        this.mesh.userData.flameMat.opacity = this.isNitroActive ? 0.9 : 0;
+      }
+
+      // Trassadagi progress va lap tekshiruvi
+      this.updateTrackPosition();
     }
 
-    let hitCar = false;
-    for (const car of cars) {
-      const d = Math.hypot(car.x - b.x, car.y - b.y);
-      if (d < 38) {
-        car.hp -= b.damage;
-        createSparkParticles(b.x, b.y);
-        hitCar = true;
-        if (b.isRocket) {
-          triggerRocketExplosion(b.x, b.y, b.ownerId);
+    updateHumanPhysics(delta, input) {
+      // Upgradelarni qo'shamiz
+      const speedUpgradeMultiplier = 1 + (GameData.upgrades.engine - 1) * 0.06;
+      const accelUpgradeMultiplier = 1 + (GameData.upgrades.accel - 1) * 0.08;
+      const handlingUpgradeMultiplier = 1 + (GameData.upgrades.handling - 1) * 0.05;
+
+      const effectiveMaxSpeed = this.maxSpeed * speedUpgradeMultiplier;
+
+      // Nitro
+      if (input.nitro && this.nitroGauge > 5) {
+        this.isNitroActive = true;
+        this.nitroGauge -= delta * 25;
+      } else {
+        this.isNitroActive = false;
+        if (this.nitroGauge < 100) {
+          this.nitroGauge += delta * 6; // Sekin to'ladi
         }
-        break;
+      }
+
+      // Tezlanish va Tormoz
+      let targetAccel = 0;
+      if (input.gas) {
+        targetAccel = (this.acceleration * 4.5 * accelUpgradeMultiplier);
+        if (this.isNitroActive) targetAccel *= 1.8;
+      } else if (input.brake) {
+        targetAccel = -this.acceleration * 5.0; // Kuchli tormoz
+      } else {
+        targetAccel = -this.speed * 0.8; // Asfalt ishqalanishi
+      }
+
+      this.speed += targetAccel * delta;
+      const maxAllowedSpeed = this.isNitroActive ? (effectiveMaxSpeed * 1.35) : effectiveMaxSpeed;
+      this.speed = Math.max(-12, Math.min(this.speed, maxAllowedSpeed));
+
+      // Drift va Boshqaruv
+      this.isDrifting = input.drift && Math.abs(this.speed) > 15;
+      const steerFactor = (this.handling / 100) * handlingUpgradeMultiplier;
+      let turnSpeed = input.steer * steerFactor * 2.2 * delta;
+
+      if (this.isDrifting) {
+        turnSpeed *= 1.35;
+        this.driftPoints += Math.floor(Math.abs(this.speed) * delta * 25);
+        this.nitroGauge = Math.min(100, this.nitroGauge + delta * 14); // Drift paytida nitro tezroq to'ladi!
+      }
+
+      this.mesh.rotateY(-turnSpeed);
+
+      // Harakat yo'nalishi
+      const forwardVec = new THREE.Vector3(0, 0, 1).applyQuaternion(this.mesh.quaternion);
+      this.mesh.position.addScaledVector(forwardVec, this.speed * delta);
+
+      // Yo'ldan chiqib ketish tekshiruvi (Off-road sekinlashuvi)
+      const closest = this.track.getClosestTrackPoint(this.mesh.position);
+      if (closest.dist > (this.track.trackWidth / 2 + 0.8)) {
+        this.speed *= 0.96;
+        if (Math.abs(this.speed) > 15 && Math.random() < 0.05) {
+          showDriftBadge('⚠️ YO\'LDAN CHIQIB KETDINGIZ!');
+        }
+      }
+
+      // Tovush yangilash
+      const speedKmh = Math.abs(Math.round(this.speed * 3.6));
+      audioSynth.updateEngine(speedKmh, input.gas, this.isNitroActive);
+      audioSynth.setDrift(this.isDrifting);
+
+      // Tangalarni yig'ish tekshiruvi
+      this.track.coins.forEach(c => {
+        if (!c.collected && c.mesh.position.distanceTo(this.mesh.position) < 2.5) {
+          c.collected = true;
+          this.scene.remove(c.mesh);
+          GameData.addCoins(25);
+          audioSynth.playCoinSound();
+          showDriftBadge('+ $25 TEGA OLINDI! 💰');
+        }
+      });
+
+      // Tezlashtiruvchi pad tekshiruvi
+      this.track.boostPads.forEach(pad => {
+        if (pad.mesh.position.distanceTo(this.mesh.position) < 3.2) {
+          this.speed = effectiveMaxSpeed * 1.45;
+          this.nitroGauge = 100;
+          audioSynth.playNitroSound();
+          showDriftBadge('🚀 SUPER TEZLANISH!');
+        }
+      });
+    }
+
+    updateBotAI(delta) {
+      // Bot trassa markazi bo'ylab harakatlanadi
+      this.botTargetT = (this.trackProgress + 0.012) % 1;
+      const targetPt = this.track.curve.getPointAt(this.botTargetT);
+      const tangent = this.track.curve.getTangentAt(this.botTargetT).normalize();
+      const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+
+      const finalTarget = new THREE.Vector3().copy(targetPt).addScaledVector(normal, this.botLaneOffset);
+
+      // Bot burilish burchagini hisoblash
+      const dirToTarget = new THREE.Vector3().subVectors(finalTarget, this.mesh.position).normalize();
+      const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.mesh.quaternion);
+
+      const cross = new THREE.Vector3().crossVectors(forward, dirToTarget);
+      const steer = Math.max(-1, Math.min(1, cross.y * 3.5));
+      this.botSteer = steer;
+
+      // Nitro ishlatish
+      this.botNitroCooldown -= delta;
+      if (this.botNitroCooldown <= 0) {
+        this.isNitroActive = true;
+        setTimeout(() => { this.isNitroActive = false; }, 2000);
+        this.botNitroCooldown = 6 + Math.random() * 8;
+      }
+
+      // Bot tezligi
+      const maxSpd = this.isNitroActive ? (this.maxSpeed * 1.25) : (this.maxSpeed * 0.95);
+      this.speed = THREE.MathUtils.lerp(this.speed, maxSpd, delta * 1.8);
+
+      this.mesh.rotateY(steer * 2.2 * delta);
+      const moveVec = new THREE.Vector3(0, 0, 1).applyQuaternion(this.mesh.quaternion);
+      this.mesh.position.addScaledVector(moveVec, this.speed * delta);
+    }
+
+    updateTrackPosition() {
+      const closest = this.track.getClosestTrackPoint(this.mesh.position);
+      const oldT = this.trackProgress;
+      const newT = closest.t;
+
+      // Aylana (Lap) hisoblash (Finish chizig'ini kesib o'tish)
+      if (oldT > 0.85 && newT < 0.15) {
+        this.lap++;
+        if (this.isHuman) {
+          document.getElementById('hud-lap').innerText = `${this.lap}/${this.maxLaps}`;
+          showDriftBadge(`AYLANA ${this.lap}/${this.maxLaps}!`);
+        }
+        if (this.lap > this.maxLaps) {
+          this.finished = true;
+          this.finishTime = Date.now();
+        }
+      }
+
+      this.trackProgress = newT;
+    }
+
+    respawnOnTrack() {
+      const pt = this.track.curve.getPointAt(this.trackProgress);
+      const tangent = this.track.curve.getTangentAt(this.trackProgress).normalize();
+      this.mesh.position.copy(pt);
+      this.mesh.position.y += 0.3;
+      this.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tangent);
+      this.speed = 0;
+      showToast('Mashina yo\'lga qaytarildi!');
+    }
+  }
+
+  // -------------------------------------------------------------
+  // 10. REAL VAQTDAGI MULTIPLAYER (PEERJS BILAN 12 O'YINCHI)
+  // -------------------------------------------------------------
+  class MultiplayerNetwork {
+    constructor() {
+      this.peer = null;
+      this.isHost = false;
+      this.roomCode = '';
+      this.connections = []; // Hostda ulangan barcha mijozlar
+      this.hostConn = null;  // Mehmonlarda Host bilan aloqa
+      this.remotePlayers = new Map(); // id -> remote player data
+      this.onPlayerJoined = null;
+      this.onGameStarted = null;
+    }
+
+    createRoom(roomCode, hostName) {
+      this.isHost = true;
+      this.roomCode = roomCode;
+      try {
+        if (typeof Peer !== 'undefined') {
+          this.peer = new Peer(`turbo_${roomCode}`, { debug: 1 });
+          this.peer.on('open', (id) => {
+            console.log('Host xonasi tayyor, ID:', id);
+          });
+          this.peer.on('connection', (conn) => {
+            if (this.connections.length >= 11) {
+              conn.close();
+              return;
+            }
+            this.connections.push(conn);
+            conn.on('data', (data) => this.handleData(conn, data));
+            conn.on('close', () => {
+              this.connections = this.connections.filter(c => c !== conn);
+            });
+          });
+        }
+      } catch (e) {
+        console.warn('PeerJS ishga tushirishda xatolik:', e);
       }
     }
-    if (hitCar) {
-      bullets.splice(i, 1);
-      continue;
-    }
 
-    const targets = [localPlayer, remotePlayer, botPlayer].filter(p => p && !p.isDead && p.id !== b.ownerId);
-    let hitPlayer = false;
-
-    for (const target of targets) {
-      const d = Math.hypot(target.x - b.x, target.y - b.y);
-      if (d < target.radius) {
-        if (b.isRocket) {
-          triggerRocketExplosion(b.x, b.y, b.ownerId);
+    joinRoom(roomCode, playerName, onSuccess, onError) {
+      this.isHost = false;
+      this.roomCode = roomCode;
+      try {
+        if (typeof Peer !== 'undefined') {
+          this.peer = new Peer({ debug: 1 });
+          this.peer.on('open', () => {
+            const hostPeerId = `turbo_${roomCode}`;
+            this.hostConn = this.peer.connect(hostPeerId);
+            this.hostConn.on('open', () => {
+              this.hostConn.send({
+                type: 'JOIN',
+                name: playerName,
+                carId: GameData.selectedCarId,
+                color: GameData.carColors[GameData.selectedCarId]
+              });
+              if (onSuccess) onSuccess();
+            });
+            this.hostConn.on('data', (data) => this.handleData(this.hostConn, data));
+            this.hostConn.on('error', (err) => { if (onError) onError(err); });
+          });
         } else {
-          target.takeDamage(b.damage, b.ownerId === localPlayer.id ? localPlayer.name : "Raqib");
-          if (localPlayer.id === b.ownerId && peerConn && peerConn.open) {
-            peerConn.send({ type: 'hit', targetId: target.id, damage: b.damage, attacker: localPlayer.name });
-          }
+          if (onError) onError('PeerJS kutubxonasi mavjud emas');
         }
-        hitPlayer = true;
-        break;
+      } catch (e) {
+        if (onError) onError(e);
       }
     }
 
-    if (hitPlayer || b.distanceTraveled >= b.maxRange) {
-      if (b.isRocket && b.distanceTraveled >= b.maxRange) {
-        triggerRocketExplosion(b.x, b.y, b.ownerId);
-      }
-      bullets.splice(i, 1);
-    }
-  }
-}
-
-function triggerRocketExplosion(x, y, ownerId) {
-  sounds.playExplosion();
-  createExplosionParticles(x, y, 50);
-
-  const targets = [localPlayer, remotePlayer, botPlayer].filter(p => p && !p.isDead);
-  for (const t of targets) {
-    const d = Math.hypot(t.x - x, t.y - y);
-    if (d < 140) {
-      const dmg = Math.floor((1 - d / 140) * 95);
-      t.takeDamage(dmg, ownerId === localPlayer.id ? localPlayer.name : "Raqib (RPG)");
-    }
-  }
-}
-
-function drawBullets(context) {
-  for (const b of bullets) {
-    context.save();
-    context.translate(b.x, b.y);
-    context.rotate(b.angle);
-
-    if (b.isRocket) {
-      context.fillStyle = '#f97316';
-      context.fillRect(-12, -4, 24, 8);
-      context.fillStyle = '#ef4444';
-      context.beginPath();
-      context.moveTo(12, -4);
-      context.lineTo(18, 0);
-      context.lineTo(12, 4);
-      context.fill();
-    } else {
-      context.fillStyle = '#ffb703';
-      context.shadowColor = '#fb8500';
-      context.shadowBlur = 8;
-      context.fillRect(-6, -2, 12, 4);
-    }
-
-    context.restore();
-  }
-}
-
-// --- PARTICLES & FX ---
-function createBloodParticles(x, y) {
-  for (let i = 0; i < 8; i++) {
-    particles.push({
-      x: x,
-      y: y,
-      vx: (Math.random() - 0.5) * 4,
-      vy: (Math.random() - 0.5) * 4,
-      radius: 2 + Math.random() * 3,
-      alpha: 0.9,
-      color: '#dc2626',
-      life: 20
-    });
-  }
-}
-
-function createSparkParticles(x, y) {
-  for (let i = 0; i < 6; i++) {
-    particles.push({
-      x: x,
-      y: y,
-      vx: (Math.random() - 0.5) * 6,
-      vy: (Math.random() - 0.5) * 6,
-      radius: 1.5 + Math.random() * 2,
-      alpha: 1,
-      color: '#facc15',
-      life: 15
-    });
-  }
-}
-
-function createPunchImpact(x, y, angle) {
-  for (let i = 0; i < 5; i++) {
-    particles.push({
-      x: x,
-      y: y,
-      vx: Math.cos(angle + (Math.random() - 0.5)) * 4,
-      vy: Math.sin(angle + (Math.random() - 0.5)) * 4,
-      radius: 3,
-      alpha: 0.8,
-      color: '#ffffff',
-      life: 12
-    });
-  }
-}
-
-function createExplosionParticles(x, y, count = 35) {
-  for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 2 + Math.random() * 8;
-    particles.push({
-      x: x,
-      y: y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      radius: 4 + Math.random() * 8,
-      alpha: 1,
-      color: Math.random() > 0.4 ? '#ff0055' : Math.random() > 0.5 ? '#f59e0b' : '#334155',
-      life: 30 + Math.random() * 20
-    });
-  }
-}
-
-function updateParticles() {
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
-    p.x += p.vx;
-    p.y += p.vy;
-    p.alpha -= 1 / p.life;
-    if (p.alpha <= 0) {
-      particles.splice(i, 1);
-    }
-  }
-}
-
-function drawParticles(context) {
-  for (const p of particles) {
-    context.save();
-    context.globalAlpha = Math.max(0, p.alpha);
-    context.fillStyle = p.color;
-    context.beginPath();
-    context.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-    context.fill();
-    context.restore();
-  }
-}
-
-// --- ITEM PICKUPS ---
-function checkPlayerPickups(player) {
-  for (const p of pickups) {
-    if (!p.active) {
-      p.respawnTimer--;
-      if (p.respawnTimer <= 0) p.active = true;
-      continue;
-    }
-
-    const d = Math.hypot(p.x - player.x, p.y - player.y);
-    if (d < 35) {
-      p.active = false;
-      p.respawnTimer = 900;
-      sounds.playPickup();
-
-      if (p.type === 'health') {
-        player.hp = Math.min(player.maxHp, player.hp + 50);
-        showNotification("❤️ +50 Sog'lik olindi!");
-      } else if (p.type === 'armor') {
-        player.armor = Math.min(player.maxArmor, player.armor + 50);
-        showNotification("🛡️ +50 Zirh olindi!");
-      } else if (p.type === 'ammo') {
-        for (const w of Object.keys(player.weapons)) {
-          if (WEAPONS[w].ammo !== Infinity) {
-            player.weapons[w].ammo = Math.min(WEAPONS[w].maxAmmo, player.weapons[w].ammo + 30);
-          }
-        }
-        showNotification("📦 O'q-dorilar to'ldirildi!");
-      } else if (p.type === 'shotgun') {
-        player.weapons.shotgun.ammo = Math.min(WEAPONS.shotgun.maxAmmo, player.weapons.shotgun.ammo + 12);
-        player.currentWeapon = 'shotgun';
-        showNotification("💥 Shotgun topildi!");
-      } else if (p.type === 'ak47') {
-        player.weapons.ak47.ammo = Math.min(WEAPONS.ak47.maxAmmo, player.weapons.ak47.ammo + 45);
-        player.currentWeapon = 'ak47';
-        showNotification("⚡ AK-47 topildi!");
-      } else if (p.type === 'rocket') {
-        player.weapons.rocket.ammo = Math.min(WEAPONS.rocket.maxAmmo, player.weapons.rocket.ammo + 3);
-        player.currentWeapon = 'rocket';
-        showNotification("🚀 Bazuka (RPG) topildi!");
-      }
-
-      updateHudWeapon();
-      updateHudHealth();
-    }
-  }
-}
-
-function drawPickups(context) {
-  for (const p of pickups) {
-    if (!p.active) continue;
-
-    context.save();
-    context.translate(p.x, p.y);
-
-    const pulse = 1 + Math.sin(Date.now() / 200) * 0.15;
-    context.scale(pulse, pulse);
-
-    let color = '#2ecc71';
-    let icon = '❤️';
-    if (p.type === 'armor') { color = '#3498db'; icon = '🛡️'; }
-    if (p.type === 'ammo') { color = '#ffb703'; icon = '📦'; }
-    if (p.type === 'shotgun') { color = '#e67e22'; icon = '💥'; }
-    if (p.type === 'ak47') { color = '#9b59b6'; icon = '⚡'; }
-    if (p.type === 'rocket') { color = '#e74c3c'; icon = '🚀'; }
-
-    context.fillStyle = color;
-    context.beginPath();
-    context.arc(0, 0, 16, 0, Math.PI * 2);
-    context.fill();
-    context.strokeStyle = '#fff';
-    context.lineWidth = 2;
-    context.stroke();
-
-    context.font = '14px sans-serif';
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.fillText(icon, 0, 1);
-
-    context.restore();
-  }
-}
-
-// --- AI BOT 1V1 (Practice mode) ---
-function updateBot() {
-  if (!botPlayer || botPlayer.isDead) {
-    if (botPlayer && botPlayer.isDead) botPlayer.update();
-    return;
-  }
-
-  const distToLocal = Math.hypot(localPlayer.x - botPlayer.x, localPlayer.y - botPlayer.y);
-  let targetAngle = Math.atan2(localPlayer.y - botPlayer.y, localPlayer.x - botPlayer.x);
-  botPlayer.angle = targetAngle;
-
-  if (botPlayer.hp < 40) {
-    const medkit = pickups.find(p => p.active && p.type === 'health');
-    if (medkit) {
-      targetAngle = Math.atan2(medkit.y - botPlayer.y, medkit.x - botPlayer.x);
-      botPlayer.angle = targetAngle;
-    }
-  }
-
-  const moveSpeed = botPlayer.isSprinting ? 5.5 : 3.8;
-  const vx = Math.cos(targetAngle) * moveSpeed;
-  const vy = Math.sin(targetAngle) * moveSpeed;
-
-  const nextX = botPlayer.x + vx;
-  const nextY = botPlayer.y + vy;
-
-  if (!checkBuildingCollision(nextX, botPlayer.y, botPlayer.radius)) {
-    botPlayer.x = nextX;
-  }
-  if (!checkBuildingCollision(botPlayer.x, nextY, botPlayer.radius)) {
-    botPlayer.y = nextY;
-  }
-
-  if (distToLocal < 550 && !localPlayer.isDead) {
-    if (distToLocal < 80) {
-      botPlayer.currentWeapon = 'fists';
-    } else if (distToLocal < 300 && botPlayer.weapons.shotgun.ammo > 0) {
-      botPlayer.currentWeapon = 'shotgun';
-    } else if (botPlayer.weapons.ak47.ammo > 0) {
-      botPlayer.currentWeapon = 'ak47';
-    } else {
-      botPlayer.currentWeapon = 'pistol';
-    }
-
-    if (Math.random() < 0.08) {
-      shootWeapon(botPlayer);
-    }
-  }
-}
-
-// --- RENDERING MAP & WORLD ---
-function drawWorld() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  ctx.save();
-  ctx.translate(-camera.x, -camera.y);
-
-  // Background
-  ctx.fillStyle = '#0f172a';
-  ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
-
-  // Asphalt roads
-  drawRoadNetwork(ctx);
-
-  // Tire Skidmarks
-  ctx.strokeStyle = '#000000';
-  ctx.lineWidth = 14;
-  for (const sm of skidmarks) {
-    ctx.save();
-    ctx.globalAlpha = sm.alpha;
-    ctx.translate(sm.x, sm.y);
-    ctx.rotate(sm.angle);
-    ctx.strokeRect(-15, -12, 30, 24);
-    ctx.restore();
-  }
-
-  // Pickups
-  drawPickups(ctx);
-
-  // Cars
-  for (const car of cars) {
-    drawCar(ctx, car);
-  }
-
-  // Players
-  if (localPlayer) localPlayer.draw(ctx);
-  if (remotePlayer) remotePlayer.draw(ctx);
-  if (botPlayer) botPlayer.draw(ctx);
-
-  // Bullets & Particles
-  drawBullets(ctx);
-  drawParticles(ctx);
-
-  // Buildings (Depth on top)
-  drawBuildings(ctx);
-
-  ctx.restore();
-
-  drawMinimap();
-}
-
-function drawRoadNetwork(context) {
-  const blockSize = 500;
-  const roadWidth = 140;
-  const numBlocksX = Math.floor(MAP_WIDTH / (blockSize + roadWidth));
-  const numBlocksY = Math.floor(MAP_HEIGHT / (blockSize + roadWidth));
-
-  context.fillStyle = '#1e293b';
-  for (let bx = 0; bx <= numBlocksX; bx++) {
-    const rx = bx * (blockSize + roadWidth);
-    context.fillRect(rx, 0, roadWidth, MAP_HEIGHT);
-  }
-  for (let by = 0; by <= numBlocksY; by++) {
-    const ry = by * (blockSize + roadWidth);
-    context.fillRect(0, ry, MAP_WIDTH, roadWidth);
-  }
-
-  // Yellow dashed lane lines
-  context.strokeStyle = '#facc15';
-  context.lineWidth = 3;
-  context.setLineDash([20, 20]);
-
-  for (let bx = 0; bx <= numBlocksX; bx++) {
-    const rx = bx * (blockSize + roadWidth) + roadWidth / 2;
-    context.beginPath();
-    context.moveTo(rx, 0);
-    context.lineTo(rx, MAP_HEIGHT);
-    context.stroke();
-  }
-  for (let by = 0; by <= numBlocksY; by++) {
-    const ry = by * (blockSize + roadWidth) + roadWidth / 2;
-    context.beginPath();
-    context.moveTo(0, ry);
-    context.lineTo(MAP_WIDTH, ry);
-    context.stroke();
-  }
-  context.setLineDash([]);
-}
-
-function drawBuildings(context) {
-  for (const b of buildings) {
-    // Drop shadow
-    context.fillStyle = 'rgba(0,0,0,0.5)';
-    context.fillRect(b.x + 8, b.y + 8, b.w, b.h);
-
-    // Wall structure
-    context.fillStyle = b.color;
-    context.fillRect(b.x, b.y, b.w, b.h);
-
-    // Roof
-    context.fillStyle = b.roofColor;
-    context.fillRect(b.x + 8, b.y + 8, b.w - 16, b.h - 16);
-
-    // Helipad
-    if (b.hasHelipad) {
-      context.strokeStyle = '#facc15';
-      context.lineWidth = 3;
-      context.beginPath();
-      context.arc(b.x + b.w / 2, b.y + b.h / 2, 28, 0, Math.PI * 2);
-      context.stroke();
-      context.font = 'bold 24px sans-serif';
-      context.fillStyle = '#facc15';
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
-      context.fillText('H', b.x + b.w / 2, b.y + b.h / 2);
-    }
-  }
-}
-
-// --- MINIMAP RADAR ---
-function drawMinimap() {
-  if (!minimapCtx || !localPlayer) return;
-  const mW = minimapCanvas.width;
-  const mH = minimapCanvas.height;
-
-  minimapCtx.fillStyle = '#0b0f19';
-  minimapCtx.fillRect(0, 0, mW, mH);
-
-  const scaleX = mW / MAP_WIDTH;
-  const scaleY = mH / MAP_HEIGHT;
-
-  minimapCtx.fillStyle = '#1e293b';
-  for (const b of buildings) {
-    minimapCtx.fillRect(b.x * scaleX, b.y * scaleY, b.w * scaleX, b.h * scaleY);
-  }
-
-  minimapCtx.fillStyle = '#f59e0b';
-  for (const car of cars) {
-    minimapCtx.fillRect(car.x * scaleX - 1.5, car.y * scaleY - 1.5, 3, 3);
-  }
-
-  const opp = isBotMatch ? botPlayer : remotePlayer;
-  if (opp && !opp.isDead) {
-    minimapCtx.fillStyle = '#00e5ff';
-    minimapCtx.beginPath();
-    minimapCtx.arc(opp.x * scaleX, opp.y * scaleY, 4, 0, Math.PI * 2);
-    minimapCtx.fill();
-  }
-
-  minimapCtx.fillStyle = '#ff0055';
-  minimapCtx.beginPath();
-  minimapCtx.arc(localPlayer.x * scaleX, localPlayer.y * scaleY, 4.5, 0, Math.PI * 2);
-  minimapCtx.fill();
-}
-
-// --- CAMERA FOLLOW ---
-function updateCamera() {
-  if (!localPlayer) return;
-  const targetX = localPlayer.x - canvas.width / 2;
-  const targetY = localPlayer.y - canvas.height / 2;
-
-  camera.x += (targetX - camera.x) * 0.12;
-  camera.y += (targetY - camera.y) * 0.12;
-
-  camera.x = Math.max(0, Math.min(MAP_WIDTH - canvas.width, camera.x));
-  camera.y = Math.max(0, Math.min(MAP_HEIGHT - canvas.height, camera.y));
-}
-
-// --- MAIN LOOP ---
-function gameLoop() {
-  if (!gameRunning) return;
-
-  if (localPlayer) {
-    localPlayer.update();
-
-    if (input.shoot) {
-      shootWeapon(localPlayer);
-    }
-    updateHudHealth();
-  }
-
-  if (isBotMatch) {
-    updateBot();
-  }
-
-  for (const car of cars) {
-    updateCar(car);
-  }
-
-  updateBullets();
-  updateParticles();
-  updateCamera();
-  drawWorld();
-
-  const now = performance.now();
-  if (peerConn && peerConn.open && now - lastNetSyncTime > 33) {
-    lastNetSyncTime = now;
-    broadcastPlayerState();
-  }
-
-  updateActionTips();
-
-  requestAnimationFrame(gameLoop);
-}
-
-function updateActionTips() {
-  const tipEl = document.getElementById('action-tip');
-  const carBtn = document.getElementById('btn-touch-car');
-  if (!tipEl || !localPlayer) return;
-
-  if (localPlayer.inCarId) {
-    tipEl.style.display = 'block';
-    tipEl.innerText = "🚗 Moshinadan tushish: [F] yoki [Moshina tugmasi]";
-    if (carBtn) carBtn.classList.add('highlight');
-  } else {
-    let near = false;
-    for (const car of cars) {
-      if (Math.hypot(car.x - localPlayer.x, car.y - localPlayer.y) < 80) {
-        near = true;
-        break;
+    broadcast(data) {
+      if (this.isHost) {
+        this.connections.forEach(conn => {
+          if (conn.open) conn.send(data);
+        });
+      } else if (this.hostConn && this.hostConn.open) {
+        this.hostConn.send(data);
       }
     }
-    if (near) {
-      tipEl.style.display = 'block';
-      tipEl.innerText = "🚗 Moshinaga minish: [F] yoki [Moshina tugmasi]";
-      if (carBtn) carBtn.classList.add('highlight');
-    } else {
-      tipEl.style.display = 'none';
-      if (carBtn) carBtn.classList.remove('highlight');
-    }
-  }
-}
 
-// --- PEER-TO-PEER MULTIPLAYER ENGINE (PeerJS) ---
-function initPeerHost(playerName) {
-  sounds.init();
-  if (typeof Peer === 'undefined') {
-    alert("Internetga ulanish zarur (WebRTC serveri uchun). Agar oflayn bo'lsangiz, 'Mashq (Bot bilan)' rejimida o'ynashingiz mumkin!");
-    return;
-  }
-
-  const roomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
-  const peerId = 'gta1v1-' + roomCode;
-
-  try {
-    peer = new Peer(peerId, { debug: 1 });
-
-    peer.on('open', (id) => {
-      isHost = true;
-      document.getElementById('display-room-code').innerText = roomCode;
-      document.getElementById('host-waiting-box').classList.remove('hidden');
-      document.getElementById('main-menu-card').classList.add('hidden');
-      showNotification(`Xona yaratildi! Kod: ${roomCode}`);
-    });
-
-    peer.on('connection', (conn) => {
-      peerConn = conn;
-      setupPeerHandlers(conn, playerName);
-    });
-
-    peer.on('error', (err) => {
-      console.error("Peer error:", err);
-      alert("Xona yaratishda xatolik yuz berdi: " + err.type);
-    });
-  } catch(e) {
-    alert("Xatolik: " + e.message);
-  }
-}
-
-function joinPeerRoom(roomCode, playerName) {
-  sounds.init();
-  if (typeof Peer === 'undefined') {
-    alert("Internetga ulanish zarur (WebRTC serveri uchun). Agar oflayn bo'lsangiz, 'Mashq (Bot bilan)' rejimida o'ynashingiz mumkin!");
-    return;
-  }
-
-  const cleanCode = roomCode.trim().toUpperCase();
-  const targetId = 'gta1v1-' + cleanCode;
-
-  try {
-    peer = new Peer(null, { debug: 1 });
-
-    peer.on('open', (id) => {
-      peerConn = peer.connect(targetId);
-      setupPeerHandlers(peerConn, playerName);
-    });
-
-    peer.on('error', (err) => {
-      console.error("Join error:", err);
-      alert("Ulanish amalga oshmadi. Kodni to'g'ri kiritganingizni tekshiring!");
-    });
-  } catch(e) {
-    alert("Ulanishda xatolik: " + e.message);
-  }
-}
-
-function setupPeerHandlers(conn, playerName) {
-  conn.on('open', () => {
-    document.getElementById('overlay-lobby').classList.add('hidden');
-
-    conn.send({
-      type: 'handshake',
-      name: playerName || "O'yinchi",
-      isHost: isHost
-    });
-
-    startGame(false);
-  });
-
-  conn.on('data', (data) => {
-    handleNetworkMessage(data);
-  });
-
-  conn.on('close', () => {
-    showNotification("Raqib o'yindan chiqdi!");
-    addKillFeed("Raqib tark etdi");
-  });
-}
-
-function broadcastPlayerState() {
-  if (!localPlayer || !peerConn) return;
-
-  peerConn.send({
-    type: 'state',
-    x: localPlayer.x,
-    y: localPlayer.y,
-    angle: localPlayer.angle,
-    vx: localPlayer.vx,
-    vy: localPlayer.vy,
-    hp: localPlayer.hp,
-    armor: localPlayer.armor,
-    weapon: localPlayer.currentWeapon,
-    inCarId: localPlayer.inCarId,
-    score: scores.local
-  });
-}
-
-function handleNetworkMessage(msg) {
-  if (!msg) return;
-
-  if (msg.type === 'handshake') {
-    if (!remotePlayer) {
-      remotePlayer = new Player('remote_p2', msg.name, false, '#00e5ff');
-      remotePlayer.respawn(800, 800);
-      document.getElementById('p2-hud-name').innerText = msg.name;
-    }
-  } else if (msg.type === 'state') {
-    if (!remotePlayer) {
-      remotePlayer = new Player('remote_p2', "Raqib", false, '#00e5ff');
-    }
-    remotePlayer.x += (msg.x - remotePlayer.x) * 0.4;
-    remotePlayer.y += (msg.y - remotePlayer.y) * 0.4;
-    remotePlayer.angle = msg.angle;
-    remotePlayer.hp = msg.hp;
-    remotePlayer.armor = msg.armor;
-    remotePlayer.currentWeapon = msg.weapon;
-    remotePlayer.inCarId = msg.inCarId;
-  } else if (msg.type === 'shoot') {
-    if (msg.shooterId !== localPlayer.id) {
-      sounds.playShoot(msg.weapon);
-      spawnBullet(msg.x, msg.y, msg.angle, msg.weapon, msg.shooterId);
-    }
-  } else if (msg.type === 'hit') {
-    if (msg.targetId === localPlayer.id) {
-      localPlayer.takeDamage(msg.damage, msg.attacker);
-    }
-  } else if (msg.type === 'carEnter') {
-    if (remotePlayer) remotePlayer.inCarId = msg.carId;
-  } else if (msg.type === 'carExit') {
-    if (remotePlayer) remotePlayer.inCarId = null;
-  } else if (msg.type === 'respawn') {
-    if (remotePlayer) remotePlayer.respawn(msg.x, msg.y);
-  }
-}
-
-// --- START GAME & GAME OVER ---
-function startGame(isSoloBot = false) {
-  sounds.init();
-  isBotMatch = isSoloBot;
-  document.getElementById('overlay-lobby').classList.add('hidden');
-  document.getElementById('game-over-modal').classList.add('hidden');
-
-  generateMap();
-
-  const playerName = document.getElementById('player-nickname').value.trim() || "O'yinchi 1";
-  localPlayer = new Player('local_p1', playerName, true, '#ff0055');
-  localPlayer.respawn(400, 400);
-
-  scores = { local: 0, remote: 0 };
-  updateHudScores();
-  updateHudHealth();
-  updateHudWeapon();
-
-  document.getElementById('p1-hud-name').innerText = playerName;
-
-  if (isSoloBot) {
-    botPlayer = new Player('bot_p2', 'Pro Bot [AI]', false, '#00e5ff');
-    botPlayer.respawn(1200, 1200);
-    document.getElementById('p2-hud-name').innerText = "Pro Bot [AI]";
-  }
-
-  gameRunning = true;
-  requestAnimationFrame(gameLoop);
-}
-
-function checkGameWin() {
-  if (scores.local >= WINNING_SCORE || scores.remote >= WINNING_SCORE) {
-    gameRunning = false;
-    const modal = document.getElementById('game-over-modal');
-    const winnerText = document.getElementById('winner-announcement');
-    const statsText = document.getElementById('final-stats-text');
-
-    if (scores.local >= WINNING_SCORE) {
-      winnerText.innerText = `🏆 TABRIKLAYMIZ! G'ALABA QOZONDINGIZ!`;
-      winnerText.style.color = '#2ecc71';
-      statsText.innerText = `Hisob: ${scores.local} - ${scores.remote}`;
-    } else {
-      winnerText.innerText = `💀 MAG'LUB BO'LDINGIZ!`;
-      winnerText.style.color = '#e74c3c';
-      statsText.innerText = `Hisob: ${scores.remote} - ${scores.local}`;
-    }
-    modal.classList.remove('hidden');
-  }
-}
-
-// --- HUD & NOTIFICATIONS ---
-function updateHudHealth() {
-  if (!localPlayer) return;
-  const hpPercent = Math.max(0, (localPlayer.hp / localPlayer.maxHp) * 100);
-  const armorPercent = Math.max(0, (localPlayer.armor / localPlayer.maxArmor) * 100);
-
-  const hpFill = document.getElementById('hud-health-fill');
-  const hpVal = document.getElementById('hud-health-val');
-  if (hpFill) hpFill.style.width = hpPercent + '%';
-  if (hpVal) hpVal.innerText = Math.round(localPlayer.hp);
-
-  const armorFill = document.getElementById('hud-armor-fill');
-  const armorVal = document.getElementById('hud-armor-val');
-  if (armorFill) armorFill.style.width = armorPercent + '%';
-  if (armorVal) armorVal.innerText = Math.round(localPlayer.armor);
-
-  const carWrap = document.getElementById('hud-car-wrap');
-  if (carWrap) {
-    if (localPlayer.inCarId) {
-      const c = cars.find(car => car.id === localPlayer.inCarId);
-      if (c) {
-        carWrap.style.display = 'flex';
-        const cHp = Math.max(0, (c.hp / c.maxHp) * 100);
-        document.getElementById('hud-car-fill').style.width = cHp + '%';
-        document.getElementById('hud-car-val').innerText = Math.round(c.hp);
-      }
-    } else {
-      carWrap.style.display = 'none';
-    }
-  }
-}
-
-function updateHudWeapon() {
-  if (!localPlayer) return;
-  const wKey = localPlayer.currentWeapon;
-  const w = WEAPONS[wKey];
-
-  const iconEl = document.getElementById('hud-weapon-icon');
-  const nameEl = document.getElementById('hud-weapon-name');
-  const ammoEl = document.getElementById('hud-ammo-val');
-
-  if (iconEl) iconEl.innerText = w.icon;
-  if (nameEl) nameEl.innerText = w.name;
-
-  if (ammoEl) {
-    if (w.ammo === Infinity) {
-      ammoEl.innerText = '∞';
-    } else {
-      ammoEl.innerText = localPlayer.weapons[wKey].ammo;
-    }
-  }
-}
-
-function updateHudScores() {
-  const p1El = document.getElementById('score-p1');
-  const p2El = document.getElementById('score-p2');
-  if (p1El) p1El.innerText = scores.local;
-  if (p2El) p2El.innerText = scores.remote;
-}
-
-function showNotification(text) {
-  const note = document.createElement('div');
-  note.className = 'killfeed-item';
-  note.innerText = text;
-  const feed = document.getElementById('killfeed');
-  if (feed) {
-    feed.appendChild(note);
-    setTimeout(() => note.remove(), 4000);
-  }
-}
-
-function addKillFeed(text) {
-  showNotification(text);
-}
-
-function cycleWeapon() {
-  if (!localPlayer) return;
-  const keys = Object.keys(WEAPONS);
-  const curIdx = keys.indexOf(localPlayer.currentWeapon);
-  const nextIdx = (curIdx + 1) % keys.length;
-  localPlayer.currentWeapon = keys[nextIdx];
-  updateHudWeapon();
-  sounds.playPickup();
-}
-
-// --- CONTROLS SETUP: KEYBOARD, MOUSE & TOUCH ---
-function setupControls() {
-  // Keyboard
-  window.addEventListener('keydown', (e) => {
-    sounds.init();
-    const k = e.key.toLowerCase();
-    if (k === 'w' || k === 'arrowup') input.up = true;
-    if (k === 's' || k === 'arrowdown') input.down = true;
-    if (k === 'a' || k === 'arrowleft') input.left = true;
-    if (k === 'd' || k === 'arrowright') input.right = true;
-    if (e.key === 'Shift') input.sprint = true;
-    if (k === 'f' || e.key === 'Enter') {
-      if (localPlayer) toggleCarEntry(localPlayer);
-    }
-    if (k === 'q' || k === 'e') {
-      cycleWeapon();
-    }
-    if (k === 'h') {
-      if (localPlayer && localPlayer.inCarId) sounds.playCarHorn();
-    }
-  });
-
-  window.addEventListener('keyup', (e) => {
-    const k = e.key.toLowerCase();
-    if (k === 'w' || k === 'arrowup') input.up = false;
-    if (k === 's' || k === 'arrowdown') input.down = false;
-    if (k === 'a' || k === 'arrowleft') input.left = false;
-    if (k === 'd' || k === 'arrowright') input.right = false;
-    if (e.key === 'Shift') input.sprint = false;
-  });
-
-  // Mouse Aiming & Shooting
-  window.addEventListener('mousemove', (e) => {
-    if (!localPlayer || input.touchAimActive) return;
-    const playerScreenX = localPlayer.x - camera.x;
-    const playerScreenY = localPlayer.y - camera.y;
-    input.aimAngle = Math.atan2(e.clientY - playerScreenY, e.clientX - playerScreenX);
-  });
-
-  window.addEventListener('mousedown', (e) => {
-    if (e.target.closest('#hud') || e.target.closest('.overlay-screen')) return;
-    sounds.init();
-    if (e.button === 0) input.shoot = true;
-  });
-
-  window.addEventListener('mouseup', (e) => {
-    if (e.button === 0) input.shoot = false;
-  });
-
-  // Mobile Virtual Joystick (Left side: Movement)
-  setupMobileJoystick();
-
-  // Mobile Action Buttons (Right side)
-  setupMobileButtons();
-}
-
-function setupMobileJoystick() {
-  const joyZone = document.getElementById('joystick-zone');
-  const joyThumb = document.getElementById('joystick-thumb');
-  if (!joyZone || !joyThumb) return;
-
-  let touchId = null;
-  let startX = 0, startY = 0;
-  const maxDist = 50;
-
-  joyZone.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    sounds.init();
-    const t = e.changedTouches[0];
-    touchId = t.identifier;
-    const rect = joyZone.getBoundingClientRect();
-    startX = rect.left + rect.width / 2;
-    startY = rect.top + rect.height / 2;
-    handleMove(t.clientX, t.clientY);
-  }, { passive: false });
-
-  joyZone.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      if (e.changedTouches[i].identifier === touchId) {
-        handleMove(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+    handleData(conn, data) {
+      if (data.type === 'START_RACE') {
+        if (this.onGameStarted) this.onGameStarted(data);
+      } else if (data.type === 'JOIN') {
+        if (this.onPlayerJoined) this.onPlayerJoined(data);
       }
     }
-  }, { passive: false });
+  }
 
-  const endJoystick = (e) => {
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      if (e.changedTouches[i].identifier === touchId) {
-        touchId = null;
-        input.up = false;
-        input.down = false;
-        input.left = false;
-        input.right = false;
-        joyThumb.style.transform = `translate(0px, 0px)`;
-      }
-    }
+  const network = new MultiplayerNetwork();
+
+  // -------------------------------------------------------------
+  // 11. ASOSIY O'YIN DARAJASI VA SIKLI (GAME CORE ENGINE)
+  // -------------------------------------------------------------
+  let scene, camera, renderer;
+  let trackManager;
+  let playerVehicle = null;
+  let racers = []; // Jami 12 ta qatnashchilar (O'yinchi + Botlar/Odamlar)
+  let isRaceActive = false;
+  let raceStartTime = 0;
+  let maxRaceParticipants = 12;
+
+  const inputState = {
+    gas: false,
+    brake: false,
+    steer: 0,
+    drift: false,
+    nitro: false
   };
 
-  joyZone.addEventListener('touchend', endJoystick);
-  joyZone.addEventListener('touchcancel', endJoystick);
+  function initGameEngine() {
+    const canvas = document.getElementById('game-canvas');
+    if (!canvas) return;
 
-  function handleMove(clientX, clientY) {
-    const dx = clientX - startX;
-    const dy = clientY - startY;
-    const dist = Math.hypot(dx, dy);
-    const angle = Math.atan2(dy, dx);
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x050814);
+    scene.fog = new THREE.FogExp2(0x0c142c, 0.0035);
 
-    const clampedDist = Math.min(dist, maxDist);
-    const thumbX = Math.cos(angle) * clampedDist;
-    const thumbY = Math.sin(angle) * clampedDist;
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.2, 800);
+    camera.position.set(0, 5, -12);
 
-    joyThumb.style.transform = `translate(${thumbX}px, ${thumbY}px)`;
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    const threshold = 14;
-    input.left = dx < -threshold;
-    input.right = dx > threshold;
-    input.up = dy < -threshold;
-    input.down = dy > threshold;
+    // Yoritish
+    const ambLight = new THREE.AmbientLight(0x223355, 1.2);
+    scene.add(ambLight);
 
-    if (!input.touchAimActive && dist > threshold) {
-      input.aimAngle = angle;
+    const dirLight = new THREE.DirectionalLight(0x00f3ff, 1.4);
+    dirLight.position.set(100, 150, 50);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    // Katta zamin tekisligi
+    const groundGeo = new THREE.PlaneGeometry(1600, 1600);
+    groundGeo.rotateX(-Math.PI / 2);
+    const groundMat = new THREE.MeshStandardMaterial({
+      color: 0x070b19,
+      roughness: 0.9
+    });
+    const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+    groundMesh.receiveShadow = true;
+    scene.add(groundMesh);
+
+    window.addEventListener('resize', onWindowResize);
+    setupDesktopKeyboard();
+    setupTouchControls();
+  }
+
+  function startRace(botCount = 11) {
+    audioSynth.init();
+
+    // Zonaga mos muhitni qo'llash
+    const currentZone = ZONES.find(z => z.id === GameData.selectedZoneId) || ZONES[0];
+    scene.background.set(currentZone.skyColor);
+    scene.fog.color.set(currentZone.fogColor);
+
+    // Eski trassa va mashinalarni tozalash
+    if (trackManager) {
+      if (trackManager.trackMesh) scene.remove(trackManager.trackMesh);
+      if (trackManager.curbsMesh) scene.remove(trackManager.curbsMesh);
+    }
+    racers.forEach(r => scene.remove(r.mesh));
+    racers = [];
+
+    // Yangi trassa qurish
+    trackManager = new RaceTrackManager(scene, currentZone);
+
+    // 1. Asosiy o'yinchi mashinasini yaratish (Pole position #0)
+    const playerConfig = CAR_CATALOG.find(c => c.id === GameData.selectedCarId) || CAR_CATALOG[0];
+    playerVehicle = new VehicleEntity('player_1', 'Siz (Poygachi)', playerConfig, true, scene, trackManager, 0);
+    racers.push(playerVehicle);
+
+    // 2. Botlarni yaratish (Jami 12 nafargacha to'ldirish)
+    const actualBots = Math.min(11, Math.max(0, botCount));
+    for (let i = 0; i < actualBots; i++) {
+      const profile = BOT_PROFILES[i % BOT_PROFILES.length];
+      const botConfig = CAR_CATALOG.find(c => c.id === profile.carId) || CAR_CATALOG[0];
+      const botVehicle = new VehicleEntity(
+        `bot_${i}`,
+        profile.name,
+        botConfig,
+        false,
+        scene,
+        trackManager,
+        i + 1
+      );
+      racers.push(botVehicle);
+    }
+
+    // UI Overlaylarni almashtirish
+    document.getElementById('main-menu-overlay').classList.add('hidden');
+    document.getElementById('multiplayer-modal').classList.add('hidden');
+    document.getElementById('victory-modal').classList.add('hidden');
+    document.getElementById('hud-overlay').classList.remove('hidden');
+
+    if (GameData.settings.touchControls) {
+      document.getElementById('touch-controls').style.display = 'block';
+    }
+
+    // Start hisoblash (Countdown 3, 2, 1, BOSING!)
+    startRaceCountdown();
+  }
+
+  function startRaceCountdown() {
+    isRaceActive = false;
+    const countdownEl = document.getElementById('hud-countdown');
+    let count = 3;
+
+    countdownEl.innerText = count;
+    audioSynth.playCountdownBeep(false);
+
+    const timer = setInterval(() => {
+      count--;
+      if (count > 0) {
+        countdownEl.innerText = count;
+        audioSynth.playCountdownBeep(false);
+      } else if (count === 0) {
+        countdownEl.innerText = 'BOSING! 🏁';
+        audioSynth.playCountdownBeep(true);
+        isRaceActive = true;
+        raceStartTime = Date.now();
+      } else {
+        countdownEl.innerText = '';
+        clearInterval(timer);
+      }
+    }, 1000);
+  }
+
+  // -------------------------------------------------------------
+  // 12. HAR FRAME ASOSIY CHIZISH (GAME LOOP 60 FPS)
+  // -------------------------------------------------------------
+  let lastTime = performance.now();
+
+  function gameLoop(now) {
+    requestAnimationFrame(gameLoop);
+    const delta = Math.min((now - lastTime) / 1000, 0.1);
+    lastTime = now;
+
+    if (trackManager) trackManager.update(delta);
+
+    if (isRaceActive) {
+      racers.forEach(r => r.update(delta, inputState));
+      updateLeaderboardAndRankings();
+      updateHUD();
+      drawMinimap();
+      checkRaceFinish();
+    }
+
+    // Kamera dinamikasi (O'yinchini ta'qib qilish)
+    if (playerVehicle && camera) {
+      updateCamera();
+    }
+
+    if (renderer && scene && camera) {
+      renderer.render(scene, camera);
     }
   }
-}
 
-function setupMobileButtons() {
-  const shootBtn = document.getElementById('btn-touch-shoot');
-  const carBtn = document.getElementById('btn-touch-car');
-  const weaponBtn = document.getElementById('btn-touch-weapon');
-  const sprintBtn = document.getElementById('btn-touch-sprint');
-  const hornBtn = document.getElementById('btn-touch-horn');
+  function updateCamera() {
+    const carPos = playerVehicle.mesh.position;
+    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(playerVehicle.mesh.quaternion);
 
-  if (shootBtn) {
-    shootBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      sounds.init();
-      input.shoot = true;
-      shootBtn.classList.add('pressed');
-    }, { passive: false });
+    if (GameData.settings.cameraMode === 'hood') {
+      // Kapon ko'rinishi
+      camera.position.copy(carPos).add(new THREE.Vector3(0, 1.2, 0)).addScaledVector(forward, 1.2);
+      const lookTarget = new THREE.Vector3().copy(carPos).addScaledVector(forward, 25);
+      camera.lookAt(lookTarget);
+    } else if (GameData.settings.cameraMode === 'top') {
+      // Yuqoridan ko'rinish
+      camera.position.set(carPos.x, carPos.y + 24, carPos.z);
+      camera.lookAt(carPos);
+    } else {
+      // Klassik 3D orqadan ko'rinish (Chase Cam)
+      const fovBonus = playerVehicle.isNitroActive ? 12 : 0;
+      camera.fov = THREE.MathUtils.lerp(camera.fov, 60 + fovBonus, 0.1);
+      camera.updateProjectionMatrix();
 
-    shootBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      input.shoot = false;
-      shootBtn.classList.remove('pressed');
+      const camOffset = new THREE.Vector3().copy(carPos).addScaledVector(forward, -7.5).add(new THREE.Vector3(0, 3.2, 0));
+      camera.position.lerp(camOffset, 0.15);
+
+      const lookTarget = new THREE.Vector3().copy(carPos).addScaledVector(forward, 8).add(new THREE.Vector3(0, 1.2, 0));
+      camera.lookAt(lookTarget);
+    }
+  }
+
+  function updateLeaderboardAndRankings() {
+    // 12 ta poygachilarni trassadagi o'rniga qarab saralash
+    racers.sort((a, b) => {
+      if (a.lap !== b.lap) return b.lap - a.lap;
+      return b.trackProgress - a.trackProgress;
+    });
+
+    const playerRank = racers.findIndex(r => r.isHuman) + 1;
+    document.getElementById('hud-rank').innerText = playerRank;
+
+    // HUD Leaderboard ro'yxatini yangilash
+    const lbContainer = document.getElementById('hud-leaderboard');
+    if (lbContainer) {
+      lbContainer.innerHTML = '';
+      racers.slice(0, 8).forEach((r, idx) => {
+        const row = document.createElement('div');
+        row.className = `lb-entry ${r.isHuman ? 'player' : ''}`;
+        row.innerHTML = `
+          <span class="lb-rank">${idx + 1}</span>
+          <span class="lb-name">${r.name}</span>
+          <span style="font-size: 0.7rem; color: var(--gold);">${Math.round(r.speed * 3.6)} km/s</span>
+        `;
+        lbContainer.appendChild(row);
+      });
+    }
+  }
+
+  function updateHUD() {
+    if (!playerVehicle) return;
+    const speedKmh = Math.abs(Math.round(playerVehicle.speed * 3.6));
+    document.getElementById('hud-speed').innerText = speedKmh;
+
+    const nitroPct = Math.round(playerVehicle.nitroGauge);
+    document.getElementById('hud-nitro-val').innerText = `${nitroPct}%`;
+    const nitroFill = document.getElementById('hud-nitro-fill');
+    if (nitroFill) {
+      nitroFill.style.width = `${nitroPct}%`;
+      if (playerVehicle.isNitroActive) {
+        nitroFill.classList.add('active');
+      } else {
+        nitroFill.classList.remove('active');
+      }
+    }
+  }
+
+  function drawMinimap() {
+    const canvas = document.getElementById('minimap-canvas');
+    if (!canvas || !trackManager) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const w = canvas.width;
+    const h = canvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+    const scale = 0.2;
+
+    // Trassani chizish
+    ctx.strokeStyle = 'rgba(0, 243, 255, 0.4)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+
+    const ptsCount = 60;
+    for (let i = 0; i <= ptsCount; i++) {
+      const t = i / ptsCount;
+      const pt = trackManager.curve.getPointAt(t);
+      const mx = cx + pt.x * scale;
+      const my = cy + pt.z * scale;
+      if (i === 0) ctx.moveTo(mx, my);
+      else ctx.lineTo(mx, my);
+    }
+    ctx.closePath();
+    ctx.stroke();
+
+    // 12 ta poygachilar nuqtalari
+    racers.forEach(r => {
+      const rx = cx + r.mesh.position.x * scale;
+      const ry = cy + r.mesh.position.z * scale;
+      ctx.beginPath();
+      if (r.isHuman) {
+        ctx.fillStyle = '#00f3ff';
+        ctx.arc(rx, ry, 4.5, 0, Math.PI * 2);
+      } else {
+        ctx.fillStyle = '#ff3b30';
+        ctx.arc(rx, ry, 2.8, 0, Math.PI * 2);
+      }
+      ctx.fill();
     });
   }
 
-  if (carBtn) {
-    carBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      sounds.init();
-      if (localPlayer) toggleCarEntry(localPlayer);
-    }, { passive: false });
+  function checkRaceFinish() {
+    if (playerVehicle && playerVehicle.finished) {
+      isRaceActive = false;
+      const playerRank = racers.findIndex(r => r.isHuman) + 1;
+
+      // Mukofot hisoblash
+      let prizeCoins = 200;
+      if (playerRank === 1) prizeCoins = 1250;
+      else if (playerRank === 2) prizeCoins = 750;
+      else if (playerRank === 3) prizeCoins = 450;
+
+      prizeCoins += Math.floor(playerVehicle.driftPoints / 10);
+      GameData.addCoins(prizeCoins);
+
+      audioSynth.playVictorySound();
+
+      // Natija ekranini chiqarish
+      const totalSeconds = Math.round((Date.now() - raceStartTime) / 1000);
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = totalSeconds % 60;
+      const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+      document.getElementById('victory-rank-text').innerText = `${playerRank}-O'RIN! ${playerRank === 1 ? "G'ALABA!" : "POYGA YAKUNLANDI"}`;
+      document.getElementById('victory-coins-won').innerText = prizeCoins.toLocaleString();
+      document.getElementById('victory-time').innerText = timeStr;
+      document.getElementById('victory-max-speed').innerText = `${Math.round(playerVehicle.maxSpeed * 3.6)} km/s`;
+      document.getElementById('victory-drift').innerText = playerVehicle.driftPoints;
+
+      document.getElementById('hud-overlay').classList.add('hidden');
+      const tc = document.getElementById('touch-controls');
+      if (tc) tc.style.display = 'none';
+      document.getElementById('victory-modal').classList.remove('hidden');
+    }
   }
 
-  if (weaponBtn) {
-    weaponBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      sounds.init();
-      cycleWeapon();
-    }, { passive: false });
-  }
+  // -------------------------------------------------------------
+  // 13. BOSHQARUV TIZIMI (KLAVIATURA VA MOBIL SENSOR)
+  // -------------------------------------------------------------
+  function setupDesktopKeyboard() {
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyW' || e.code === 'ArrowUp') inputState.gas = true;
+      if (e.code === 'KeyS' || e.code === 'ArrowDown') inputState.brake = true;
+      if (e.code === 'KeyA' || e.code === 'ArrowLeft') inputState.steer = -1;
+      if (e.code === 'KeyD' || e.code === 'ArrowRight') inputState.steer = 1;
+      if (e.code === 'Space') inputState.drift = true;
+      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyN') {
+        inputState.nitro = true;
+        if (playerVehicle && playerVehicle.nitroGauge > 10) audioSynth.playNitroSound();
+      }
+      if (e.code === 'KeyR') {
+        if (playerVehicle) playerVehicle.respawnOnTrack();
+      }
+      if (e.code === 'KeyC') {
+        cycleCameraMode();
+      }
+    });
 
-  if (sprintBtn) {
-    sprintBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      input.sprint = true;
-      sprintBtn.classList.add('pressed');
-    }, { passive: false });
-
-    sprintBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      input.sprint = false;
-      sprintBtn.classList.remove('pressed');
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'KeyW' || e.code === 'ArrowUp') inputState.gas = false;
+      if (e.code === 'KeyS' || e.code === 'ArrowDown') inputState.brake = false;
+      if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+        if (inputState.steer === -1) inputState.steer = 0;
+      }
+      if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+        if (inputState.steer === 1) inputState.steer = 0;
+      }
+      if (e.code === 'Space') inputState.drift = false;
+      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyN') inputState.nitro = false;
     });
   }
 
-  if (hornBtn) {
-    hornBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      sounds.playCarHorn();
-    }, { passive: false });
-  }
+  function setupTouchControls() {
+    function bindTouch(btnId, onDown, onUp) {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
 
-  // Right touch-area aim tracking
-  window.addEventListener('touchstart', (e) => {
-    for (let i = 0; i < e.touches.length; i++) {
-      const t = e.touches[i];
-      if (t.clientX > window.innerWidth / 2 && !t.target.closest('.touch-btn') && !t.target.closest('#hud')) {
-        input.touchAimActive = true;
-        updateTouchAim(t.clientX, t.clientY);
-      }
+      const handleDown = (e) => {
+        e.preventDefault();
+        btn.classList.add('pressed');
+        onDown();
+      };
+      const handleUp = (e) => {
+        e.preventDefault();
+        btn.classList.remove('pressed');
+        onUp();
+      };
+
+      btn.addEventListener('touchstart', handleDown, { passive: false });
+      btn.addEventListener('touchend', handleUp, { passive: false });
+      btn.addEventListener('touchcancel', handleUp, { passive: false });
+      btn.addEventListener('mousedown', handleDown);
+      btn.addEventListener('mouseup', handleUp);
+      btn.addEventListener('mouseleave', handleUp);
     }
-  }, { passive: false });
 
-  window.addEventListener('touchmove', (e) => {
-    for (let i = 0; i < e.touches.length; i++) {
-      const t = e.touches[i];
-      if (t.clientX > window.innerWidth / 2 && !t.target.closest('.touch-btn') && !t.target.closest('#hud')) {
-        updateTouchAim(t.clientX, t.clientY);
-      }
+    bindTouch('t-btn-left', () => { inputState.steer = -1; }, () => { if (inputState.steer === -1) inputState.steer = 0; });
+    bindTouch('t-btn-right', () => { inputState.steer = 1; }, () => { if (inputState.steer === 1) inputState.steer = 0; });
+    bindTouch('t-btn-gas', () => { inputState.gas = true; }, () => { inputState.gas = false; });
+    bindTouch('t-btn-brake', () => { inputState.brake = true; }, () => { inputState.brake = false; });
+    bindTouch('t-btn-nitro', () => {
+      inputState.nitro = true;
+      if (playerVehicle && playerVehicle.nitroGauge > 10) audioSynth.playNitroSound();
+    }, () => { inputState.nitro = false; });
+
+    document.getElementById('t-btn-respawn')?.addEventListener('click', () => {
+      if (playerVehicle) playerVehicle.respawnOnTrack();
+    });
+
+    document.getElementById('t-btn-camera')?.addEventListener('click', () => {
+      cycleCameraMode();
+    });
+
+    document.getElementById('t-btn-exit')?.addEventListener('click', () => {
+      isRaceActive = false;
+      document.getElementById('hud-overlay').classList.add('hidden');
+      document.getElementById('touch-controls').style.display = 'none';
+      document.getElementById('main-menu-overlay').classList.remove('hidden');
+    });
+  }
+
+  function cycleCameraMode() {
+    const modes = ['chase', 'hood', 'top'];
+    const curIdx = modes.indexOf(GameData.settings.cameraMode);
+    GameData.settings.cameraMode = modes[(curIdx + 1) % modes.length];
+    GameData.save();
+    showToast(`Kamera ko'rinishi: ${GameData.settings.cameraMode.toUpperCase()}`);
+  }
+
+  // -------------------------------------------------------------
+  // 14. UI VA MODAL BOSHQARUVI
+  // -------------------------------------------------------------
+  function openModal(modalId) {
+    document.getElementById(modalId)?.classList.remove('hidden');
+  }
+
+  function closeModal(modalId) {
+    document.getElementById(modalId)?.classList.add('hidden');
+  }
+
+  function updateCoinDisplay() {
+    const el = document.getElementById('coin-display');
+    if (el) el.innerText = GameData.coins.toLocaleString();
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast-message');
+    if (!toast) return;
+    toast.innerText = msg;
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 2400);
+  }
+
+  function showDriftBadge(text) {
+    const badge = document.getElementById('hud-drift-badge');
+    if (!badge) return;
+    badge.innerText = text;
+    badge.classList.add('active');
+    setTimeout(() => {
+      badge.classList.remove('active');
+    }, 1800);
+  }
+
+  function onWindowResize() {
+    if (camera && renderer) {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
     }
-  }, { passive: false });
-
-  window.addEventListener('touchend', () => {
-    input.touchAimActive = false;
-  });
-
-  function updateTouchAim(cx, cy) {
-    if (!localPlayer) return;
-    const playerScreenX = localPlayer.x - camera.x;
-    const playerScreenY = localPlayer.y - camera.y;
-    input.aimAngle = Math.atan2(cy - playerScreenY, cx - playerScreenX);
   }
-}
 
-// --- WINDOW RESIZE & INIT ---
-function resizeCanvas() {
-  if (canvas) {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-  if (minimapCanvas) {
-    minimapCanvas.width = 140;
-    minimapCanvas.height = 140;
-  }
-}
+  // -------------------------------------------------------------
+  // 15. DOM HODISALARI VA BOSH MENYU ULASHLARI
+  // -------------------------------------------------------------
+  function setupDOMEvents() {
+    // Menyu tugmalari
+    document.getElementById('btn-menu-solo')?.addEventListener('click', () => {
+      startRace(7); // Standart 7 ta bot bilan qiziqarli poyga
+    });
 
-window.addEventListener('resize', resizeCanvas);
+    document.getElementById('btn-menu-garage')?.addEventListener('click', () => {
+      openModal('garage-modal');
+      updateGarageCar();
+    });
 
-window.addEventListener('DOMContentLoaded', () => {
-  canvas = document.getElementById('gameCanvas');
-  ctx = canvas.getContext('2d');
+    document.getElementById('btn-menu-zones')?.addEventListener('click', () => {
+      renderZonesSelection();
+      openModal('zones-modal');
+    });
 
-  minimapCanvas = document.getElementById('minimapCanvas');
-  minimapCtx = minimapCanvas.getContext('2d');
+    document.getElementById('btn-menu-multiplayer')?.addEventListener('click', () => {
+      setupMultiplayerLobby();
+      openModal('multiplayer-modal');
+    });
 
-  resizeCanvas();
-  setupControls();
+    // Modalni yopish (X) tugmalari
+    document.querySelectorAll('.close-modal-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetModal = btn.getAttribute('data-close');
+        if (targetModal) closeModal(targetModal);
+      });
+    });
 
-  const fsBtn = document.getElementById('btn-fullscreen');
-  if (fsBtn) {
-    fsBtn.addEventListener('click', () => {
+    // Garaj prev/next
+    document.getElementById('btn-garage-prev')?.addEventListener('click', () => {
+      garageCurrentIdx = (garageCurrentIdx - 1 + CAR_CATALOG.length) % CAR_CATALOG.length;
+      updateGarageCar();
+    });
+    document.getElementById('btn-garage-next')?.addEventListener('click', () => {
+      garageCurrentIdx = (garageCurrentIdx + 1) % CAR_CATALOG.length;
+      updateGarageCar();
+    });
+
+    // Mashina sotib olish / tanlash
+    document.getElementById('btn-car-action')?.addEventListener('click', () => {
+      const curCar = CAR_CATALOG[garageCurrentIdx];
+      const isOwned = GameData.unlockedCars.includes(curCar.id);
+
+      if (!isOwned) {
+        if (GameData.coins >= curCar.price) {
+          GameData.coins -= curCar.price;
+          GameData.unlockedCars.push(curCar.id);
+          GameData.selectedCarId = curCar.id;
+          GameData.save();
+          updateCoinDisplay();
+          updateGarageCar();
+          showToast(`Tabriklaymiz! "${curCar.name}" sotib olindi! 🏎️`);
+        } else {
+          showToast(`Mablag' yetarli emas! Poygalarda qatnashib pul ishlang!`);
+        }
+      } else {
+        GameData.selectedCarId = curCar.id;
+        GameData.save();
+        updateGarageCar();
+        showToast(`"${curCar.name}" tanlandi!`);
+      }
+    });
+
+    // Tyuning Upgradelari
+    ['engine', 'accel', 'handling', 'nitro'].forEach(type => {
+      document.getElementById(`btn-up-${type}`)?.addEventListener('click', () => {
+        const costMultipliers = { engine: 500, accel: 500, handling: 400, nitro: 600 };
+        const cost = GameData.upgrades[type] * costMultipliers[type];
+        if (GameData.coins >= cost && GameData.upgrades[type] < 5) {
+          GameData.coins -= cost;
+          GameData.upgrades[type]++;
+          GameData.save();
+          updateCoinDisplay();
+          updateGarageCar();
+          showToast(`Yangilandi! ${type.toUpperCase()} hozirgi bosqich: ${GameData.upgrades[type]}`);
+        }
+      });
+    });
+
+    // Yuqori panel tezkor tugmalari
+    document.getElementById('btn-sound-toggle')?.addEventListener('click', () => {
+      GameData.settings.sound = !GameData.settings.sound;
+      GameData.save();
+      document.getElementById('btn-sound-toggle').innerText = GameData.settings.sound ? '🔊' : '🔇';
+      showToast(GameData.settings.sound ? 'Ovoz yoqildi' : 'Ovoz o\'chirildi');
+    });
+
+    document.getElementById('btn-touch-toggle')?.addEventListener('click', () => {
+      GameData.settings.touchControls = !GameData.settings.touchControls;
+      GameData.save();
+      const tc = document.getElementById('touch-controls');
+      if (tc) tc.style.display = GameData.settings.touchControls ? 'block' : 'none';
+      showToast(GameData.settings.touchControls ? 'Mobil boshqaruv yoqildi' : 'Mobil boshqaruv yashirildi');
+    });
+
+    document.getElementById('btn-fullscreen')?.addEventListener('click', () => {
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
       } else {
-        document.exitFullscreen().catch(() => {});
+        document.exitFullscreen();
       }
     });
-  }
 
-  const muteBtn = document.getElementById('btn-mute');
-  if (muteBtn) {
-    muteBtn.addEventListener('click', () => {
-      sounds.muted = !sounds.muted;
-      muteBtn.innerText = sounds.muted ? '🔇' : '🔊';
+    document.getElementById('btn-settings-open')?.addEventListener('click', () => {
+      openModal('settings-modal');
+    });
+
+    // Finish modal tugmalari
+    document.getElementById('btn-victory-restart')?.addEventListener('click', () => {
+      closeModal('victory-modal');
+      startRace(racers.length > 1 ? racers.length - 1 : 7);
+    });
+    document.getElementById('btn-victory-garage')?.addEventListener('click', () => {
+      closeModal('victory-modal');
+      isRaceActive = false;
+      document.getElementById('hud-overlay').classList.add('hidden');
+      const tc = document.getElementById('touch-controls');
+      if (tc) tc.style.display = 'none';
+      document.getElementById('main-menu-overlay').classList.remove('hidden');
+      openModal('garage-modal');
+      updateGarageCar();
     });
   }
 
-  const createRoomBtn = document.getElementById('btn-create-room');
-  if (createRoomBtn) {
-    createRoomBtn.addEventListener('click', () => {
-      const name = document.getElementById('player-nickname').value.trim() || "O'yinchi 1";
-      initPeerHost(name);
-    });
-  }
+  // -------------------------------------------------------------
+  // 16. MULTIPLAYER LOBBY (12 NAFAR VA BOTLAR SLIDERI)
+  // -------------------------------------------------------------
+  function setupMultiplayerLobby() {
+    const hostCode = 'UZB-' + Math.floor(100 + Math.random() * 900);
+    document.getElementById('host-room-code').innerText = hostCode;
 
-  const joinRoomBtn = document.getElementById('btn-join-room');
-  if (joinRoomBtn) {
-    joinRoomBtn.addEventListener('click', () => {
-      const code = document.getElementById('room-code-input').value.trim();
+    // Botlar slideri
+    const slider = document.getElementById('bot-slider');
+    const label = document.getElementById('bot-count-label');
+    const updateLobby = () => {
+      const val = parseInt(slider.value, 10);
+      label.innerText = `${val} ta bot`;
+      renderLobbySlots(val);
+      const countEl = document.getElementById('connected-count');
+      if (countEl) countEl.innerText = 1 + val;
+    };
+    slider.addEventListener('input', updateLobby);
+    updateLobby();
+
+    // Tablar (Host / Join)
+    const tabHost = document.getElementById('tab-btn-host');
+    const tabJoin = document.getElementById('tab-btn-join');
+    const secHost = document.getElementById('mp-host-section');
+    const secJoin = document.getElementById('mp-join-section');
+
+    tabHost.addEventListener('click', () => {
+      tabHost.classList.add('active');
+      tabJoin.classList.remove('active');
+      secHost.classList.remove('hidden');
+      secJoin.classList.add('hidden');
+    });
+
+    tabJoin.addEventListener('click', () => {
+      tabJoin.classList.add('active');
+      tabHost.classList.remove('active');
+      secJoin.classList.remove('hidden');
+      secHost.classList.add('hidden');
+    });
+
+    // Kodni nusxalash
+    document.getElementById('btn-copy-room-code')?.addEventListener('click', () => {
+      navigator.clipboard.writeText(hostCode).then(() => {
+        showToast('Xona kodi nusxalandi! Do\'stlaringizga yuboring!');
+      });
+    });
+
+    // Multiplayer poygani boshlash
+    document.getElementById('btn-start-multiplayer-race')?.addEventListener('click', () => {
+      const bots = parseInt(slider.value, 10);
+      network.createRoom(hostCode, document.getElementById('host-player-name').value);
+      startRace(bots);
+    });
+
+    // Join submit
+    document.getElementById('btn-submit-join')?.addEventListener('click', () => {
+      const code = document.getElementById('join-room-code-input').value.trim();
+      const name = document.getElementById('join-player-name').value.trim() || 'Mehmon';
       if (!code) {
-        alert("Iltimos, do'stingiz bergan xona kodini kiriting!");
+        showToast('Iltimos xona kodini kiriting!');
         return;
       }
-      const name = document.getElementById('player-nickname').value.trim() || "O'yinchi 2";
-      joinPeerRoom(code, name);
-    });
-  }
-
-  const soloBtn = document.getElementById('btn-solo-practice');
-  if (soloBtn) {
-    soloBtn.addEventListener('click', () => {
-      startGame(true);
-    });
-  }
-
-  const restartBtn = document.getElementById('btn-restart-game');
-  if (restartBtn) {
-    restartBtn.addEventListener('click', () => {
-      startGame(isBotMatch);
-    });
-  }
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const roomParam = urlParams.get('room');
-  if (roomParam) {
-    const roomInput = document.getElementById('room-code-input');
-    if (roomInput) {
-      roomInput.value = roomParam;
-      showNotification(`Xona kodi topildi: ${roomParam}`);
-    }
-  }
-
-  const copyBtn = document.getElementById('btn-copy-code');
-  if (copyBtn) {
-    copyBtn.addEventListener('click', () => {
-      const code = document.getElementById('display-room-code').innerText;
-      const shareUrl = `${window.location.origin}${window.location.pathname}?room=${code}`;
-      navigator.clipboard.writeText(shareUrl).then(() => {
-        showNotification("Havola nusxalandi! Do'stingizga yuboring.");
-      }).catch(() => {
-        showNotification(`Xona kodi: ${code}`);
+      showToast(`Xonaga ulanilmoqda: ${code}...`);
+      network.joinRoom(code, name, () => {
+        showToast('Xonaga muvaffaqiyatli ulandingiz! Xost kutilyapti...');
+        document.getElementById('join-waiting-status').classList.remove('hidden');
+      }, (err) => {
+        showToast(`Ulanishda xatolik yuz berdi. Botlar bilan o'ynashingiz mumkin!`);
       });
     });
   }
-});
+
+  function renderLobbySlots(botCount) {
+    const container = document.getElementById('host-lobby-players');
+    if (!container) return;
+    container.innerHTML = '';
+
+    // Slot 1: Host o'yinchi
+    const hostSlot = document.createElement('div');
+    hostSlot.className = 'lobby-player-slot filled';
+    hostSlot.innerHTML = `
+      <div class="lobby-player-avatar">👑</div>
+      <div class="lobby-player-name">${document.getElementById('host-player-name').value}</div>
+      <div class="lobby-player-car">Host</div>
+      <span class="lobby-badge" style="color: var(--primary);">TAYYOR</span>
+    `;
+    container.appendChild(hostSlot);
+
+    // Qolgan slotlar: Botlar va Bo'sh joylar (Jami 12 ta)
+    for (let i = 1; i < 12; i++) {
+      const slot = document.createElement('div');
+      if (i <= botCount) {
+        const botName = BOT_PROFILES[(i - 1) % BOT_PROFILES.length].name;
+        slot.className = 'lobby-player-slot bot';
+        slot.innerHTML = `
+          <div class="lobby-player-avatar">🤖</div>
+          <div class="lobby-player-name">${botName}</div>
+          <div class="lobby-player-car">AI Bot</div>
+          <span class="lobby-badge" style="color: var(--secondary);">BOT</span>
+        `;
+      } else {
+        slot.className = 'lobby-player-slot';
+        slot.innerHTML = `
+          <div class="lobby-player-avatar" style="opacity: 0.3;">👤</div>
+          <div class="lobby-player-name" style="color: var(--text-muted);">Bo'sh joy</div>
+          <div class="lobby-player-car">#${i + 1}</div>
+          <span class="lobby-badge">KUTILYAPTI</span>
+        `;
+      }
+      container.appendChild(slot);
+    }
+  }
+
+  // -------------------------------------------------------------
+  // 17. O'YINNI ISHGA TUSHIRISH (BOOTSTRAP)
+  // -------------------------------------------------------------
+  window.addEventListener('DOMContentLoaded', () => {
+    GameData.load();
+    updateCoinDisplay();
+    initGameEngine();
+    initGarageViewer();
+    setupDOMEvents();
+    renderZonesSelection();
+
+    // Mobil qurilmani aniqlash
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (window.innerWidth <= 768);
+    if (isMobile) {
+      GameData.settings.touchControls = true;
+    }
+
+    // Animatsiya siklini yurgizish
+    requestAnimationFrame(gameLoop);
+  });
+
+})();
