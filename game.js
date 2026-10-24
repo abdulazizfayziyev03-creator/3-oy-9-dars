@@ -28,16 +28,16 @@
 
   const GameData = {
     coins: 1000,
-    unlockedCars: ['car_starter'],
-    selectedCarId: 'car_starter',
+    unlockedCars: ['car_gt'],
+    selectedCarId: 'car_gt',
     selectedZoneId: 'cyber',
     carColors: {
-      car_starter: '#00f3ff',
-      car_muscle: '#ff3b30',
-      car_offroad: '#ff9e00',
-      car_cyber: '#b026ff',
-      car_hyper: '#ffbe0b',
-      car_f1: '#00ff88'
+      car_gt: '#eab308',
+      car_monza: '#ef4444',
+      car_venom: '#10b981',
+      car_phantom: '#8b5cf6',
+      car_hyperion: '#06b6d4',
+      car_zenith: '#f8fafc'
     },
     upgrades: {
       engine: 1,
@@ -58,10 +58,15 @@
         if (savedCoins !== null) this.coins = parseInt(savedCoins, 10);
 
         const savedUnlocked = localStorage.getItem(STORAGE_KEYS.UNLOCKED);
-        if (savedUnlocked) this.unlockedCars = JSON.parse(savedUnlocked);
+        if (savedUnlocked) {
+          this.unlockedCars = JSON.parse(savedUnlocked);
+          if (!this.unlockedCars.includes('car_gt')) this.unlockedCars.unshift('car_gt');
+        }
 
         const savedCar = localStorage.getItem(STORAGE_KEYS.CURRENT_CAR);
-        if (savedCar) this.selectedCarId = savedCar;
+        if (savedCar) {
+          this.selectedCarId = savedCar === 'car_starter' ? 'car_gt' : savedCar;
+        }
 
         const savedColors = localStorage.getItem(STORAGE_KEYS.CAR_COLORS);
         if (savedColors) this.carColors = Object.assign(this.carColors, JSON.parse(savedColors));
@@ -97,93 +102,87 @@
   };
 
   // -------------------------------------------------------------
-  // 2. MASHINALAR VA BOZOR KATALOGI (6 TA MASHINA)
+  // 2. MASHINALAR VA BOZOR KATALOGI (6 TA 3D SUPERKAR)
   // -------------------------------------------------------------
   const CAR_CATALOG = [
     {
-      id: 'car_starter',
-      name: 'Racer One',
-      carClass: 'Sport Sedan',
+      id: 'car_gt',
+      name: 'Apex GT 3D',
+      carClass: 'V8 Superkar (Rasmdagi)',
       price: 0,
-      baseSpeed: 180,
-      baseAccel: 3.8,
-      baseHandling: 72,
-      baseNitro: 100,
-      bodyStyle: 'sedan',
-      color: '#00f3ff',
-      desc: 'Boshlang\'ich engil va qulay sport mashinasi'
-    },
-    {
-      id: 'car_muscle',
-      name: 'Nitro Viper',
-      carClass: 'Muscle GT',
-      price: 1500,
-      baseSpeed: 215,
+      baseSpeed: 235,
       baseAccel: 3.2,
-      baseHandling: 68,
-      baseNitro: 120,
-      bodyStyle: 'muscle',
-      color: '#ff3b30',
-      desc: 'Katta quvvat va baland tezlanishga ega mushakdor GT'
-    },
-    {
-      id: 'car_offroad',
-      name: 'Sahara Rover',
-      carClass: '4x4 Trophy Buggy',
-      price: 3200,
-      baseSpeed: 200,
-      baseAccel: 3.0,
-      baseHandling: 88,
-      baseNitro: 110,
-      bodyStyle: 'buggy',
-      color: '#ff9e00',
-      desc: 'Qum va qor zonalarida mukammal boshqaruv'
-    },
-    {
-      id: 'car_cyber',
-      name: 'Cyber Phantom',
-      carClass: 'Cyber Concept',
-      price: 6500,
-      baseSpeed: 250,
-      baseAccel: 2.5,
       baseHandling: 82,
-      baseNitro: 140,
-      bodyStyle: 'cyber',
-      color: '#b026ff',
-      desc: 'Futuristik neon giperkar, juda tezkor va chaqqon'
+      baseNitro: 110,
+      color: '#eab308', // Rasmdagi yorqin sariq 3D rang
+      desc: '3D-modellashtirilgan afsonaviy sariq V8 superkar'
     },
     {
-      id: 'car_hyper',
-      name: 'Hyper Lightning',
-      carClass: 'Exotic Hypercar',
-      price: 12000,
+      id: 'car_monza',
+      name: 'Monza Spyder',
+      carClass: 'Twin-Turbo Roadster',
+      price: 1800,
+      baseSpeed: 260,
+      baseAccel: 2.8,
+      baseHandling: 86,
+      baseNitro: 125,
+      color: '#ef4444',
+      desc: 'Rosso qizil rangdagi poyga versiyasi'
+    },
+    {
+      id: 'car_venom',
+      name: 'Venom GTS',
+      carClass: 'Aero Track Edition',
+      price: 4500,
       baseSpeed: 285,
-      baseAccel: 2.1,
-      baseHandling: 90,
-      baseNitro: 160,
-      bodyStyle: 'hyper',
-      color: '#ffbe0b',
-      desc: 'Eng yuqori maksimal tezlikka ega afsonaviy avtomobil'
+      baseAccel: 2.4,
+      baseHandling: 89,
+      baseNitro: 140,
+      color: '#10b981',
+      desc: 'Katta burilish barqarorligiga ega superkar'
     },
     {
-      id: 'car_f1',
-      name: 'Apex Formula',
-      carClass: 'Formula Legend',
-      price: 20000,
-      baseSpeed: 320,
+      id: 'car_phantom',
+      name: 'Phantom Stealth',
+      carClass: 'Carbon Special',
+      price: 8500,
+      baseSpeed: 310,
+      baseAccel: 2.0,
+      baseHandling: 92,
+      baseNitro: 155,
+      color: '#8b5cf6',
+      desc: 'Binafsha supportlar va to\'q uglerodli korpus'
+    },
+    {
+      id: 'car_hyperion',
+      name: 'Hyperion SV',
+      carClass: 'V12 Hyper Series',
+      price: 14000,
+      baseSpeed: 335,
       baseAccel: 1.7,
-      baseHandling: 98,
-      baseNitro: 180,
-      bodyStyle: 'formula',
-      color: '#00ff88',
-      desc: 'Trassalarning mutlaq chempioni - Formula 1 monstri'
+      baseHandling: 95,
+      baseNitro: 175,
+      color: '#06b6d4',
+      desc: 'Ekstremal tezlik va chaqqon boshqaruv'
+    },
+    {
+      id: 'car_zenith',
+      name: 'Zenith Ultimate',
+      carClass: 'Hypercar Afsonasi',
+      price: 22000,
+      baseSpeed: 365,
+      baseAccel: 1.4,
+      baseHandling: 99,
+      baseNitro: 195,
+      color: '#f8fafc',
+      desc: 'Maksimal ko\'rsatkichlarga ega mutlaq chempion'
     }
   ];
 
   const COLOR_PALETTE = [
-    '#00f3ff', '#ff3b30', '#00ff88', '#ffbe0b', 
-    '#b026ff', '#ffffff', '#111111', '#ff5400', 
-    '#0077b6', '#e024c3'
+    '#eab308', '#ef4444', '#10b981', '#8b5cf6', 
+    '#06b6d4', '#f8fafc', '#171717', '#f97316', 
+    '#3b82f6', '#ec4899'
   ];
 
   // -------------------------------------------------------------
@@ -272,19 +271,19 @@
     }
   ];
 
-  // Botlar uchun 11 ta maxsus nikneymlar va xarakterlar
+  // Botlar uchun 11 ta maxsus nikneymlar va xarakterlar (Rasmdagi superkarlar bilan)
   const BOT_PROFILES = [
-    { name: 'Temur Poygachi', carId: 'car_muscle', color: '#ff3b30', skill: 0.95 },
-    { name: 'Speedy_Uz', carId: 'car_cyber', color: '#b026ff', skill: 0.92 },
-    { name: 'Vortex_99', carId: 'car_hyper', color: '#ffbe0b', skill: 0.96 },
-    { name: 'Drift_Master', carId: 'car_f1', color: '#00ff88', skill: 0.98 },
-    { name: 'Falcon_X', carId: 'car_starter', color: '#00f3ff', skill: 0.88 },
-    { name: 'Blaze_Tashkent', carId: 'car_muscle', color: '#ff5400', skill: 0.90 },
-    { name: 'Shadow_Samarkand', carId: 'car_cyber', color: '#111111', skill: 0.93 },
-    { name: 'Titan_Rider', carId: 'car_offroad', color: '#ff9e00', skill: 0.89 },
-    { name: 'Ghost_Phantom', carId: 'car_hyper', color: '#ffffff', skill: 0.94 },
-    { name: 'Thunder_Bukhara', carId: 'car_f1', color: '#e024c3', skill: 0.97 },
-    { name: 'Nitro_Boy', carId: 'car_starter', color: '#0077b6', skill: 0.87 }
+    { name: 'Temur Poygachi', carId: 'car_monza', color: '#ef4444', skill: 0.95 },
+    { name: 'Speedy_Uz', carId: 'car_gt', color: '#eab308', skill: 0.92 },
+    { name: 'Vortex_99', carId: 'car_phantom', color: '#8b5cf6', skill: 0.96 },
+    { name: 'Drift_Master', carId: 'car_zenith', color: '#f8fafc', skill: 0.98 },
+    { name: 'Falcon_X', carId: 'car_gt', color: '#eab308', skill: 0.88 },
+    { name: 'Blaze_Tashkent', carId: 'car_venom', color: '#10b981', skill: 0.90 },
+    { name: 'Shadow_Samarkand', carId: 'car_phantom', color: '#171717', skill: 0.93 },
+    { name: 'Titan_Rider', carId: 'car_hyperion', color: '#06b6d4', skill: 0.89 },
+    { name: 'Ghost_Phantom', carId: 'car_zenith', color: '#ffffff', skill: 0.94 },
+    { name: 'Thunder_Bukhara', carId: 'car_monza', color: '#f97316', skill: 0.97 },
+    { name: 'Nitro_Boy', carId: 'car_gt', color: '#3b82f6', skill: 0.87 }
   ];
 
   // -------------------------------------------------------------
@@ -471,158 +470,360 @@
   // -------------------------------------------------------------
   function create3DCarMesh(carConfig, colorHex) {
     const carGroup = new THREE.Group();
-    const bodyColor = new THREE.Color(colorHex || carConfig.color);
+    const primaryColor = new THREE.Color(colorHex || carConfig.color || '#eab308');
+
+    // Asosiy kuzov materiali (3D modellashtirishdagi silliq sariq metallik)
     const bodyMat = new THREE.MeshStandardMaterial({
-      color: bodyColor,
-      roughness: 0.2,
-      metalness: 0.8
+      color: primaryColor,
+      roughness: 0.28,
+      metalness: 0.55
     });
+
+    const blackTrimMat = new THREE.MeshStandardMaterial({
+      color: 0x11161d,
+      roughness: 0.8,
+      metalness: 0.2
+    });
+
     const glassMat = new THREE.MeshStandardMaterial({
-      color: 0x111625,
+      color: 0x0f172a,
       roughness: 0.1,
       metalness: 0.9,
       transparent: true,
       opacity: 0.85
     });
-    const blackMat = new THREE.MeshStandardMaterial({
-      color: 0x111111,
-      roughness: 0.7
-    });
-    const rimMat = new THREE.MeshStandardMaterial({
-      color: 0xdde5ed,
-      metalness: 0.9,
+
+    const chromeMat = new THREE.MeshStandardMaterial({
+      color: 0xe2e8f0,
+      metalness: 0.95,
       roughness: 0.1
     });
-    const glowCyanMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
-    const glowRedMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
 
-    let bodyLength = 4.2;
-    let bodyWidth = 1.9;
-    let bodyHeight = 0.85;
+    const brakeRotorMat = new THREE.MeshStandardMaterial({
+      color: 0xcfd8dc,
+      metalness: 0.9,
+      roughness: 0.25
+    });
 
-    if (carConfig.bodyStyle === 'formula') {
-      bodyLength = 4.8;
-      bodyWidth = 1.6;
-      bodyHeight = 0.55;
-    } else if (carConfig.bodyStyle === 'buggy') {
-      bodyLength = 3.9;
-      bodyWidth = 2.1;
-      bodyHeight = 1.2;
+    const caliperMat = new THREE.MeshStandardMaterial({
+      color: 0xd946ef, // Rasmdagi pushti-binafsha (magenta) tormoz supporti
+      roughness: 0.35,
+      metalness: 0.6
+    });
+
+    const rimMat = new THREE.MeshStandardMaterial({
+      color: 0x1a202c,
+      roughness: 0.3,
+      metalness: 0.85
+    });
+
+    // Qora CAD kontur chizig'i qo'shish yordamchisi (Rasmdagi kabi barcha qirralar chizig'i)
+    function addCADLines(mesh, threshold = 22) {
+      if (!mesh || !mesh.geometry) return;
+      const edges = new THREE.EdgesGeometry(mesh.geometry, threshold);
+      const lineMat = new THREE.LineBasicMaterial({
+        color: 0x050505,
+        linewidth: 1.5,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1
+      });
+      const lines = new THREE.LineSegments(edges, lineMat);
+      mesh.add(lines);
     }
 
-    // 1. Asosiy kuzov (Chassis)
-    const chassisGeo = new THREE.BoxGeometry(bodyWidth, bodyHeight, bodyLength);
-    const chassisMesh = new THREE.Mesh(chassisGeo, bodyMat);
-    chassisMesh.position.y = bodyHeight / 2 + 0.35;
-    chassisMesh.castShadow = true;
-    chassisMesh.receiveShadow = true;
-    carGroup.add(chassisMesh);
+    // 1. Asosiy Markaziy Kuzov (Main Center Monocoque)
+    const mainBodyGeo = new THREE.BoxGeometry(1.94, 0.48, 4.3);
+    const mainBody = new THREE.Mesh(mainBodyGeo, bodyMat);
+    mainBody.position.set(0, 0.44, 0);
+    mainBody.castShadow = true;
+    addCADLines(mainBody, 20);
+    carGroup.add(mainBody);
 
-    // 2. Kabina va oynalar
-    if (carConfig.bodyStyle !== 'formula') {
-      const cabinGeo = new THREE.BoxGeometry(bodyWidth * 0.82, bodyHeight * 0.75, bodyLength * 0.45);
-      const cabinMesh = new THREE.Mesh(cabinGeo, glassMat);
-      cabinMesh.position.set(0, bodyHeight + 0.25, -0.2);
-      carGroup.add(cabinMesh);
-    } else {
-      // Formula Cockpit + Halo
-      const haloGeo = new THREE.TorusGeometry(0.35, 0.05, 8, 16, Math.PI);
-      const haloMesh = new THREE.Mesh(haloGeo, blackMat);
-      haloMesh.position.set(0, bodyHeight + 0.3, -0.1);
-      haloMesh.rotation.x = Math.PI / 2;
-      carGroup.add(haloMesh);
-    }
+    // 2. Old Tumshuq va Kapot (Sloping Aerodynamic Hood)
+    const hoodGeo = new THREE.BoxGeometry(1.86, 0.32, 1.45);
+    const hoodMesh = new THREE.Mesh(hoodGeo, bodyMat);
+    hoodMesh.position.set(0, 0.48, 1.4);
+    hoodMesh.rotation.x = -0.14; // Oldinga nishab
+    addCADLines(hoodMesh, 18);
+    carGroup.add(hoodMesh);
 
-    // 3. Spoyler / Qanot
-    if (carConfig.bodyStyle === 'formula' || carConfig.bodyStyle === 'hyper' || carConfig.bodyStyle === 'muscle') {
-      const wingGeo = new THREE.BoxGeometry(bodyWidth * 1.05, 0.08, 0.5);
-      const wingMesh = new THREE.Mesh(wingGeo, blackMat);
-      wingMesh.position.set(0, bodyHeight + 0.55, -bodyLength / 2 + 0.2);
+    // Kapot o'rtasidagi qavariq shtampovka (Rasmdagi kapot naqshi)
+    const hoodBadgeGeo = new THREE.BoxGeometry(1.15, 0.04, 0.95);
+    const hoodBadge = new THREE.Mesh(hoodBadgeGeo, bodyMat);
+    hoodBadge.position.set(0, 0.58, 1.4);
+    hoodBadge.rotation.x = -0.14;
+    addCADLines(hoodBadge, 15);
+    carGroup.add(hoodBadge);
 
-      const standGeo = new THREE.BoxGeometry(0.08, 0.35, 0.1);
-      const standLeft = new THREE.Mesh(standGeo, blackMat);
-      standLeft.position.set(-0.6, bodyHeight + 0.35, -bodyLength / 2 + 0.2);
-      const standRight = new THREE.Mesh(standGeo, blackMat);
-      standRight.position.set(0.6, bodyHeight + 0.35, -bodyLength / 2 + 0.2);
+    // Old bamper va radiator panjarasi (Front lower air intake)
+    const frontGrilleGeo = new THREE.BoxGeometry(1.1, 0.16, 0.1);
+    const frontGrille = new THREE.Mesh(frontGrilleGeo, blackTrimMat);
+    frontGrille.position.set(0, 0.28, 2.18);
+    addCADLines(frontGrille, 15);
+    carGroup.add(frontGrille);
 
-      carGroup.add(wingMesh);
-      carGroup.add(standLeft);
-      carGroup.add(standRight);
-    }
+    // Old yon tormoz havo teshiklari (Brake cooling ducts)
+    const leftDuct = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.08), blackTrimMat);
+    leftDuct.position.set(-0.76, 0.32, 2.1);
+    addCADLines(leftDuct, 15);
+    carGroup.add(leftDuct);
 
-    // 4. Old fara chiroqlari (Headlights)
-    const lightGeo = new THREE.BoxGeometry(0.35, 0.12, 0.08);
-    const leftLight = new THREE.Mesh(lightGeo, glowCyanMat);
-    leftLight.position.set(-bodyWidth / 2 + 0.3, bodyHeight / 2 + 0.4, bodyLength / 2 + 0.01);
-    const rightLight = new THREE.Mesh(lightGeo, glowCyanMat);
-    rightLight.position.set(bodyWidth / 2 - 0.3, bodyHeight / 2 + 0.4, bodyLength / 2 + 0.01);
-    carGroup.add(leftLight);
-    carGroup.add(rightLight);
+    const rightDuct = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.08), blackTrimMat);
+    rightDuct.position.set(0.76, 0.32, 2.1);
+    addCADLines(rightDuct, 15);
+    carGroup.add(rightDuct);
 
-    // 5. Orqa stop-chiroqlar (Taillights)
-    const tailLightGeo = new THREE.BoxGeometry(0.4, 0.1, 0.08);
-    const leftTail = new THREE.Mesh(tailLightGeo, glowRedMat);
-    leftTail.position.set(-bodyWidth / 2 + 0.35, bodyHeight / 2 + 0.4, -bodyLength / 2 - 0.01);
-    const rightTail = new THREE.Mesh(tailLightGeo, glowRedMat);
-    rightTail.position.set(bodyWidth / 2 - 0.35, bodyHeight / 2 + 0.4, -bodyLength / 2 - 0.01);
+    // 3. Kabina (Sleek Teardrop Greenhouse Cockpit)
+    const cabinGeo = new THREE.BoxGeometry(1.52, 0.58, 1.85);
+    const cabinMesh = new THREE.Mesh(cabinGeo, glassMat);
+    cabinMesh.position.set(0, 0.92, -0.15);
+    addCADLines(cabinMesh, 20);
+    carGroup.add(cabinMesh);
+
+    // Tom paneli (Body colored roof strip)
+    const roofGeo = new THREE.BoxGeometry(1.24, 0.06, 1.1);
+    const roofMesh = new THREE.Mesh(roofGeo, bodyMat);
+    roofMesh.position.set(0, 1.22, -0.18);
+    addCADLines(roofMesh, 15);
+    carGroup.add(roofMesh);
+
+    // Yon oynalar va qora ustunlar (A-pillars)
+    const aPillarLeft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.65, 0.08), blackTrimMat);
+    aPillarLeft.position.set(-0.72, 0.88, 0.65);
+    aPillarLeft.rotation.x = -0.45;
+    carGroup.add(aPillarLeft);
+
+    const aPillarRight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.65, 0.08), blackTrimMat);
+    aPillarRight.position.set(0.72, 0.88, 0.65);
+    aPillarRight.rotation.x = -0.45;
+    carGroup.add(aPillarRight);
+
+    // Oyna tozalagichlar (Windshield Wipers)
+    const wiperLeft = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.03, 0.04), blackTrimMat);
+    wiperLeft.position.set(-0.25, 0.68, 0.82);
+    wiperLeft.rotation.z = 0.2;
+    carGroup.add(wiperLeft);
+
+    // Yon ko'zgular (Aerodynamic Side Mirrors on stalks)
+    const mirrorStemGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.16, 8);
+    const mirrorGeo = new THREE.BoxGeometry(0.24, 0.12, 0.12);
+
+    const leftStem = new THREE.Mesh(mirrorStemGeo, blackTrimMat);
+    leftStem.position.set(-0.95, 0.78, 0.45);
+    leftStem.rotation.z = 0.4;
+    const leftMirror = new THREE.Mesh(mirrorGeo, blackTrimMat);
+    leftMirror.position.set(-1.05, 0.84, 0.45);
+    addCADLines(leftMirror, 15);
+    carGroup.add(leftStem);
+    carGroup.add(leftMirror);
+
+    const rightStem = new THREE.Mesh(mirrorStemGeo, blackTrimMat);
+    rightStem.position.set(0.95, 0.78, 0.45);
+    rightStem.rotation.z = -0.4;
+    const rightMirror = new THREE.Mesh(mirrorGeo, blackTrimMat);
+    rightMirror.position.set(1.05, 0.84, 0.45);
+    addCADLines(rightMirror, 15);
+    carGroup.add(rightStem);
+    carGroup.add(rightMirror);
+
+    // 4. Yon Havo Yutkichlar (McLaren uslubidagi katta qora havo teshiklari - rasmdagidek)
+    const scoopGeo = new THREE.BoxGeometry(0.12, 0.52, 0.8);
+    const leftScoop = new THREE.Mesh(scoopGeo, blackTrimMat);
+    leftScoop.position.set(-0.97, 0.54, -0.65);
+    addCADLines(leftScoop, 15);
+    carGroup.add(leftScoop);
+
+    const rightScoop = new THREE.Mesh(scoopGeo, blackTrimMat);
+    rightScoop.position.set(0.97, 0.54, -0.65);
+    addCADLines(rightScoop, 15);
+    carGroup.add(rightScoop);
+
+    // Eshik o'ymasi (Sculpted Door insets)
+    const doorInsetLeft = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.38, 1.2), bodyMat);
+    doorInsetLeft.position.set(-0.95, 0.50, 0.2);
+    addCADLines(doorInsetLeft, 15);
+    carGroup.add(doorInsetLeft);
+
+    const doorInsetRight = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.38, 1.2), bodyMat);
+    doorInsetRight.position.set(0.95, 0.50, 0.2);
+    addCADLines(doorInsetRight, 15);
+    carGroup.add(doorInsetRight);
+
+    // 5. Old Chiroqlar (Dual Projector Lenses inside Swept-back casing)
+    const headlightGeo = new THREE.BoxGeometry(0.38, 0.14, 0.65);
+    const lampGeo = new THREE.SphereGeometry(0.06, 12, 12);
+    const lampMat = new THREE.MeshBasicMaterial({ color: 0xeff6ff });
+
+    // Chap fara
+    const leftHeadlight = new THREE.Mesh(headlightGeo, glassMat);
+    leftHeadlight.position.set(-0.64, 0.58, 1.7);
+    leftHeadlight.rotation.y = -0.15;
+    leftHeadlight.rotation.x = -0.18;
+    addCADLines(leftHeadlight, 15);
+    const leftLamp1 = new THREE.Mesh(lampGeo, lampMat);
+    leftLamp1.position.set(-0.62, 0.58, 1.82);
+    const leftLamp2 = new THREE.Mesh(lampGeo, lampMat);
+    leftLamp2.position.set(-0.66, 0.59, 1.62);
+    carGroup.add(leftHeadlight);
+    carGroup.add(leftLamp1);
+    carGroup.add(leftLamp2);
+
+    // O'ng fara
+    const rightHeadlight = new THREE.Mesh(headlightGeo, glassMat);
+    rightHeadlight.position.set(0.64, 0.58, 1.7);
+    rightHeadlight.rotation.y = 0.15;
+    rightHeadlight.rotation.x = -0.18;
+    addCADLines(rightHeadlight, 15);
+    const rightLamp1 = new THREE.Mesh(lampGeo, lampMat);
+    rightLamp1.position.set(0.62, 0.58, 1.82);
+    const rightLamp2 = new THREE.Mesh(lampGeo, lampMat);
+    rightLamp2.position.set(0.66, 0.59, 1.62);
+    carGroup.add(rightHeadlight);
+    carGroup.add(rightLamp1);
+    carGroup.add(rightLamp2);
+
+    // 6. Orqa Qism, Spoyler va Diffuzor (Rear Deck, Lip Spoiler & Diffuser)
+    const rearDeckGeo = new THREE.BoxGeometry(1.92, 0.44, 1.2);
+    const rearDeck = new THREE.Mesh(rearDeckGeo, bodyMat);
+    rearDeck.position.set(0, 0.56, -1.6);
+    addCADLines(rearDeck, 18);
+    carGroup.add(rearDeck);
+
+    // Orqa Daktell Spoyler (Ducktail Spoiler)
+    const spoilerGeo = new THREE.BoxGeometry(1.78, 0.08, 0.35);
+    const spoilerMesh = new THREE.Mesh(spoilerGeo, blackTrimMat);
+    spoilerMesh.position.set(0, 0.82, -2.1);
+    spoilerMesh.rotation.x = 0.2;
+    addCADLines(spoilerMesh, 15);
+    carGroup.add(spoilerMesh);
+
+    // Orqa qizil LED stop chiroqlar (Taillights)
+    const tailMat = new THREE.MeshBasicMaterial({ color: 0xff0044 });
+    const tailGeo = new THREE.BoxGeometry(0.7, 0.06, 0.05);
+    const leftTail = new THREE.Mesh(tailGeo, tailMat);
+    leftTail.position.set(-0.55, 0.62, -2.16);
+    const rightTail = new THREE.Mesh(tailGeo, tailMat);
+    rightTail.position.set(0.55, 0.62, -2.16);
     carGroup.add(leftTail);
     carGroup.add(rightTail);
 
-    // 6. G'ildiraklar (4 ta aylantiriluvchi g'ildiraklar)
-    const wheelRadius = carConfig.bodyStyle === 'buggy' ? 0.52 : 0.42;
-    const wheelWidth = carConfig.bodyStyle === 'formula' ? 0.38 : 0.3;
-    const wheelGeo = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 16);
-    wheelGeo.rotateZ(Math.PI / 2);
+    // Ikkita Dumaloq Xrom Glushitel (Dual High-Mount Chrome Exhaust Pipes)
+    const exhaustGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.18, 16);
+    exhaustGeo.rotateX(Math.PI / 2);
+    const leftExhaust = new THREE.Mesh(exhaustGeo, chromeMat);
+    leftExhaust.position.set(-0.25, 0.62, -2.16);
+    const rightExhaust = new THREE.Mesh(exhaustGeo, chromeMat);
+    rightExhaust.position.set(0.25, 0.62, -2.16);
+    carGroup.add(leftExhaust);
+    carGroup.add(rightExhaust);
+
+    // Orqa diffuzor (Rear Aero Diffuser)
+    const diffuserGeo = new THREE.BoxGeometry(1.6, 0.16, 0.4);
+    const diffuserMesh = new THREE.Mesh(diffuserGeo, blackTrimMat);
+    diffuserMesh.position.set(0, 0.22, -2.05);
+    addCADLines(diffuserMesh, 15);
+    carGroup.add(diffuserMesh);
+
+    // 7. G'ildiraklar va Disklar (5-Spoke Star Alloy Wheels with Brake Rotors & Calipers)
+    const wheelRadius = 0.44;
+    const wheelWidth = 0.32;
+    const tireGeo = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 24);
+    tireGeo.rotateZ(Math.PI / 2);
 
     const wheels = [];
     const wheelPositions = [
-      { x: -bodyWidth / 2 - 0.05, y: wheelRadius, z: bodyLength / 2 - 0.8, isFront: true },
-      { x: bodyWidth / 2 + 0.05, y: wheelRadius, z: bodyLength / 2 - 0.8, isFront: true },
-      { x: -bodyWidth / 2 - 0.05, y: wheelRadius, z: -bodyLength / 2 + 0.8, isFront: false },
-      { x: bodyWidth / 2 + 0.05, y: wheelRadius, z: -bodyLength / 2 + 0.8, isFront: false }
+      { x: -0.98, y: wheelRadius, z: 1.35, isFront: true },
+      { x: 0.98, y: wheelRadius, z: 1.35, isFront: true },
+      { x: -1.02, y: wheelRadius, z: -1.35, isFront: false },
+      { x: 1.02, y: wheelRadius, z: -1.35, isFront: false }
     ];
 
     wheelPositions.forEach((pos) => {
       const wheelHub = new THREE.Group();
       wheelHub.position.set(pos.x, pos.y, pos.z);
 
-      const tireMesh = new THREE.Mesh(wheelGeo, blackMat);
+      // Shina (Rubber tire with CAD outline)
+      const tireMesh = new THREE.Mesh(tireGeo, blackTrimMat);
       tireMesh.castShadow = true;
+      addCADLines(tireMesh, 35);
       wheelHub.add(tireMesh);
 
-      const rimGeo = new THREE.CylinderGeometry(wheelRadius * 0.6, wheelRadius * 0.6, wheelWidth + 0.02, 8);
-      rimGeo.rotateZ(Math.PI / 2);
-      const rimMesh = new THREE.Mesh(rimGeo, rimMat);
-      wheelHub.add(rimMesh);
+      // Tormoz Diski (Perforated Silver Brake Rotor)
+      const rotorGeo = new THREE.CylinderGeometry(wheelRadius * 0.72, wheelRadius * 0.72, 0.04, 16);
+      rotorGeo.rotateZ(Math.PI / 2);
+      const rotorMesh = new THREE.Mesh(rotorGeo, brakeRotorMat);
+      wheelHub.add(rotorMesh);
 
+      // Tormoz Supporti (Pushti/Binafsha Caliper)
+      const caliperGeo = new THREE.BoxGeometry(0.12, 0.18, 0.2);
+      const caliperMesh = new THREE.Mesh(caliperGeo, caliperMat);
+      caliperMesh.position.set(pos.x > 0 ? 0.08 : -0.08, wheelRadius * 0.3, 0);
+      addCADLines(caliperMesh, 20);
+      wheelHub.add(caliperMesh);
+
+      // 5-Spoke Yulduzli Qora Disk (5-Spoke Star Rim)
+      const rimGroup = new THREE.Group();
+      for (let s = 0; s < 5; s++) {
+        const spokeGeo = new THREE.BoxGeometry(0.04, wheelRadius * 0.7, 0.06);
+        const spokeMesh = new THREE.Mesh(spokeGeo, rimMat);
+        spokeMesh.rotation.x = (s * Math.PI * 2) / 5;
+        spokeMesh.position.x = pos.x > 0 ? wheelWidth / 2 - 0.02 : -wheelWidth / 2 + 0.02;
+        rimGroup.add(spokeMesh);
+      }
+
+      // Markaziy boltlar va qopqoq
+      const capGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.08, 12);
+      capGeo.rotateZ(Math.PI / 2);
+      const capMesh = new THREE.Mesh(capGeo, chromeMat);
+      capMesh.position.x = pos.x > 0 ? wheelWidth / 2 : -wheelWidth / 2;
+      rimGroup.add(capMesh);
+
+      wheelHub.add(rimGroup);
       carGroup.add(wheelHub);
-      wheels.push({ group: wheelHub, mesh: tireMesh, isFront: pos.isFront });
-    });
 
-    // 7. Nitro Olov Chiqaruvchi Trubalar (Exhaust flame particles)
-    const exhaustGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.25, 8);
-    exhaustGeo.rotateX(Math.PI / 2);
-    const leftExhaust = new THREE.Mesh(exhaustGeo, blackMat);
-    leftExhaust.position.set(-0.35, 0.35, -bodyLength / 2 - 0.1);
-    const rightExhaust = new THREE.Mesh(exhaustGeo, blackMat);
-    rightExhaust.position.set(0.35, 0.35, -bodyLength / 2 - 0.1);
-    carGroup.add(leftExhaust);
-    carGroup.add(rightExhaust);
+      wheels.push({ group: wheelHub, mesh: tireMesh, rimGroup, isFront: pos.isFront });
+    });
 
     // Nitro olov alanga mesh
     const flameMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff, transparent: true, opacity: 0 });
     const flameGeo = new THREE.ConeGeometry(0.18, 0.7, 8);
     flameGeo.rotateX(-Math.PI / 2);
     const flameMesh = new THREE.Mesh(flameGeo, flameMat);
-    flameMesh.position.set(0, 0.35, -bodyLength / 2 - 0.45);
+    flameMesh.position.set(0, 0.62, -2.45);
     carGroup.add(flameMesh);
 
-    // Mashina obyektiga ichki havolalarni biriktiramiz
+    // 8. Mashina ostidagi qora kontakt soyasi
+    const shadowGeo = new THREE.PlaneGeometry(2.3, 4.6);
+    shadowGeo.rotateX(-Math.PI / 2);
+    const shadowCanvas = document.createElement('canvas');
+    shadowCanvas.width = 64;
+    shadowCanvas.height = 128;
+    const sCtx = shadowCanvas.getContext('2d');
+    const grad = sCtx.createRadialGradient(32, 64, 4, 32, 64, 45);
+    grad.addColorStop(0, 'rgba(0, 0, 0, 0.95)');
+    grad.addColorStop(0.6, 'rgba(0, 0, 0, 0.55)');
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    sCtx.fillStyle = grad;
+    sCtx.fillRect(0, 0, 64, 128);
+
+    const shadowTex = new THREE.CanvasTexture(shadowCanvas);
+    const shadowMat = new THREE.MeshBasicMaterial({
+      map: shadowTex,
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false
+    });
+    const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
+    shadowMesh.position.y = 0.02;
+    carGroup.add(shadowMesh);
+
+    // Obyekt havolalari
     carGroup.userData = {
       wheels,
       flameMesh,
       flameMat,
-      chassisMesh,
+      mainBody,
       bodyMat,
       config: carConfig
     };
@@ -654,17 +855,17 @@
     garageRenderer.setSize(width, height);
     garageRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // Yoritish
-    const ambLight = new THREE.AmbientLight(0xffffff, 0.8);
+    // Yoritish (Rasmdagi sariq superkarni chiroyli ko'rsatish uchun studiya chiroqlari)
+    const ambLight = new THREE.AmbientLight(0xffffff, 1.1);
     garageScene.add(ambLight);
 
-    const dirLight = new THREE.DirectionalLight(0x00f3ff, 1.2);
-    dirLight.position.set(5, 8, 5);
+    const dirLight = new THREE.DirectionalLight(0xfffbeb, 1.6);
+    dirLight.position.set(6, 10, 6);
     garageScene.add(dirLight);
 
-    const backLight = new THREE.DirectionalLight(0xb026ff, 0.8);
-    backLight.position.set(-5, 4, -5);
-    garageScene.add(backLight);
+    const fillLight = new THREE.DirectionalLight(0xe0f2fe, 0.9);
+    fillLight.position.set(-6, 5, -6);
+    garageScene.add(fillLight);
 
     // Pol doirasi (Podium)
     const platformGeo = new THREE.CylinderGeometry(3.2, 3.4, 0.2, 32);
@@ -870,8 +1071,66 @@
   }
 
   // -------------------------------------------------------------
-  // 8. 3D TRASSA YARATISH MOTORASI (CIRCUIT, PROPS, COINS, BOOSTS)
+  // 8. TEKSTURALAR VA 3D TRASSA YARATISH MOTORASI
   // -------------------------------------------------------------
+  function createAsphaltRoadTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // To'q qora asfalt foni
+    ctx.fillStyle = '#1c222e';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Asfalt donadorligi (Realistik don)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    for (let i = 0; i < 4000; i++) {
+      const rx = Math.random() * 512;
+      const ry = Math.random() * 512;
+      ctx.fillRect(rx, ry, 2, 2);
+    }
+
+    // Yon chekka mustahkam sariq chiziqlar (Bordyur bo'yi)
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 18;
+    ctx.beginPath();
+    ctx.moveTo(22, 0); ctx.lineTo(22, 512);
+    ctx.moveTo(512 - 22, 0); ctx.lineTo(512 - 22, 512);
+    ctx.stroke();
+
+    // O'rtadagi oq uzuq-yuluq poyga chizig'i (Dashed Centerline)
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 14;
+    ctx.setLineDash([48, 36]);
+    ctx.beginPath();
+    ctx.moveTo(256, 0); ctx.lineTo(256, 512);
+    ctx.stroke();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(1, 35);
+    return texture;
+  }
+
+  function createCurbTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#e11d48'; // Qizil
+    ctx.fillRect(0, 0, 128, 64);
+    ctx.fillStyle = '#ffffff'; // Oq
+    ctx.fillRect(0, 64, 128, 64);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(1, 45);
+    return texture;
+  }
+
   class RaceTrackManager {
     constructor(scene, zoneConfig) {
       this.scene = scene;
@@ -879,6 +1138,9 @@
       this.curve = null;
       this.trackMesh = null;
       this.curbsMesh = null;
+      this.barrierMesh = null;
+      this.groundMesh = null;
+      this.archGroup = null;
       this.coins = [];
       this.boostPads = [];
       this.environmentProps = [];
@@ -889,7 +1151,7 @@
     }
 
     generateCircuit() {
-      // Trassa egri chiziq nazorat nuqtalari (To'liq tekis, qat'iy yer sathidagi yo'l)
+      // Trassa egri chiziq nazorat nuqtalari (To'liq tekis, qat'iy yer sathidagi yo'l: y = 0)
       const points = [
         new THREE.Vector3(0, 0, -250),
         new THREE.Vector3(120, 0, -200),
@@ -910,11 +1172,25 @@
       this.curve.tension = 0.5;
       this.totalLength = this.curve.getLength();
 
+      this.buildGround();
       this.buildRoadMesh();
       this.buildStartFinishArch();
       this.spawnBoostPads();
       this.spawnCoins();
       this.buildEnvironment();
+    }
+
+    buildGround() {
+      const groundGeo = new THREE.PlaneGeometry(1600, 1600);
+      groundGeo.rotateX(-Math.PI / 2);
+      const groundMat = new THREE.MeshStandardMaterial({
+        color: this.zone.groundColor,
+        roughness: 0.95
+      });
+      this.groundMesh = new THREE.Mesh(groundGeo, groundMat);
+      this.groundMesh.position.y = 0;
+      this.groundMesh.receiveShadow = true;
+      this.scene.add(this.groundMesh);
     }
 
     buildRoadMesh() {
@@ -940,28 +1216,30 @@
         const leftPos = new THREE.Vector3().copy(pt).addScaledVector(normal, -halfW);
         const rightPos = new THREE.Vector3().copy(pt).addScaledVector(normal, halfW);
 
-        vertices.push(leftPos.x, 0.04, leftPos.z);
-        vertices.push(rightPos.x, 0.04, rightPos.z);
+        // Asfalt sathi (y = 0.05)
+        vertices.push(leftPos.x, 0.05, leftPos.z);
+        vertices.push(rightPos.x, 0.05, rightPos.z);
 
-        uvs.push(0, t * 40);
-        uvs.push(1, t * 40);
+        uvs.push(0, t * 35);
+        uvs.push(1, t * 35);
 
         if (i < segments) {
           const base = i * 2;
-          indices.push(base, base + 1, base + 2);
-          indices.push(base + 1, base + 3, base + 2);
+          // Normal yuqoriga qarashi uchun to'g'ri burchak tartibi:
+          indices.push(base, base + 2, base + 1);
+          indices.push(base + 1, base + 2, base + 3);
         }
 
-        // Yon bordyurlar
-        const curbW = 1.2;
+        // Yon bordyurlar (Qizil-oq poyga bordyuri)
+        const curbW = 1.4;
         const curbLeftInner = leftPos;
         const curbLeftOuter = new THREE.Vector3().copy(pt).addScaledVector(normal, -halfW - curbW);
         leftCurbsVerts.push(curbLeftOuter.x, 0.12, curbLeftOuter.z);
-        leftCurbsVerts.push(curbLeftInner.x, 0.05, curbLeftInner.z);
+        leftCurbsVerts.push(curbLeftInner.x, 0.06, curbLeftInner.z);
 
         const curbRightInner = rightPos;
         const curbRightOuter = new THREE.Vector3().copy(pt).addScaledVector(normal, halfW + curbW);
-        rightCurbsVerts.push(curbRightInner.x, 0.05, curbRightInner.z);
+        rightCurbsVerts.push(curbRightInner.x, 0.06, curbRightInner.z);
         rightCurbsVerts.push(curbRightOuter.x, 0.12, curbRightOuter.z);
       }
 
@@ -971,9 +1249,10 @@
       roadGeo.computeVertexNormals();
 
       const roadMat = new THREE.MeshStandardMaterial({
-        color: this.zone.roadColor,
-        roughness: 0.6,
-        metalness: 0.2
+        map: createAsphaltRoadTexture(),
+        roughness: 0.8,
+        metalness: 0.1,
+        side: THREE.DoubleSide
       });
 
       this.trackMesh = new THREE.Mesh(roadGeo, roadMat);
@@ -985,29 +1264,98 @@
       const allCurbVerts = leftCurbsVerts.concat(rightCurbsVerts);
       curbGeo.setAttribute('position', new THREE.Float32BufferAttribute(allCurbVerts, 3));
 
+      const curbUvs = [];
+      for (let i = 0; i <= segments; i++) {
+        curbUvs.push(0, (i / segments) * 45);
+        curbUvs.push(1, (i / segments) * 45);
+      }
+      for (let i = 0; i <= segments; i++) {
+        curbUvs.push(0, (i / segments) * 45);
+        curbUvs.push(1, (i / segments) * 45);
+      }
+      curbGeo.setAttribute('uv', new THREE.Float32BufferAttribute(curbUvs, 2));
+
       for (let i = 0; i < segments; i++) {
         const base = i * 2;
-        curbIndices.push(base, base + 1, base + 2);
-        curbIndices.push(base + 1, base + 3, base + 2);
+        curbIndices.push(base, base + 2, base + 1);
+        curbIndices.push(base + 1, base + 2, base + 3);
       }
       const offset = (segments + 1) * 2;
       for (let i = 0; i < segments; i++) {
         const base = offset + i * 2;
-        curbIndices.push(base, base + 1, base + 2);
-        curbIndices.push(base + 1, base + 3, base + 2);
+        curbIndices.push(base, base + 2, base + 1);
+        curbIndices.push(base + 1, base + 2, base + 3);
       }
       curbGeo.setIndex(curbIndices);
       curbGeo.computeVertexNormals();
 
       const curbMat = new THREE.MeshStandardMaterial({
-        color: this.zone.curbColor,
+        map: createCurbTexture(),
         roughness: 0.4,
-        emissive: this.zone.curbColor,
-        emissiveIntensity: 0.2
+        side: THREE.DoubleSide
       });
 
       this.curbsMesh = new THREE.Mesh(curbGeo, curbMat);
+      this.curbsMesh.receiveShadow = true;
       this.scene.add(this.curbsMesh);
+
+      this.buildBarriers();
+    }
+
+    buildBarriers() {
+      // Trassa ikki cheti bo'ylab metall to'siqlar (Guardrails)
+      const segments = this.trackPointsCount;
+      const barrierGeo = new THREE.BufferGeometry();
+      const barrierVerts = [];
+      const barrierIndices = [];
+
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const pt = this.curve.getPointAt(t);
+        const tangent = this.curve.getTangentAt(t).normalize();
+        const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+        const barrierDist = this.trackWidth / 2 + 1.6;
+
+        // Chap to'siq
+        const leftBottom = new THREE.Vector3().copy(pt).addScaledVector(normal, -barrierDist);
+        barrierVerts.push(leftBottom.x, 0.05, leftBottom.z);
+        barrierVerts.push(leftBottom.x, 0.85, leftBottom.z);
+
+        // O'ng to'siq
+        const rightBottom = new THREE.Vector3().copy(pt).addScaledVector(normal, barrierDist);
+        barrierVerts.push(rightBottom.x, 0.05, rightBottom.z);
+        barrierVerts.push(rightBottom.x, 0.85, rightBottom.z);
+
+        if (i < segments) {
+          const b1 = i * 4;
+          // Chap to'siq
+          barrierIndices.push(b1, b1 + 1, b1 + 4);
+          barrierIndices.push(b1 + 1, b1 + 5, b1 + 4);
+          barrierIndices.push(b1, b1 + 4, b1 + 1);
+          barrierIndices.push(b1 + 1, b1 + 4, b1 + 5);
+
+          // O'ng to'siq
+          const b2 = b1 + 2;
+          barrierIndices.push(b2, b2 + 1, b2 + 4);
+          barrierIndices.push(b2 + 1, b2 + 5, b2 + 4);
+          barrierIndices.push(b2, b2 + 4, b2 + 1);
+          barrierIndices.push(b2 + 1, b2 + 4, b2 + 5);
+        }
+      }
+
+      barrierGeo.setAttribute('position', new THREE.Float32BufferAttribute(barrierVerts, 3));
+      barrierGeo.setIndex(barrierIndices);
+      barrierGeo.computeVertexNormals();
+
+      const barrierMat = new THREE.MeshStandardMaterial({
+        color: 0x64748b,
+        metalness: 0.85,
+        roughness: 0.25,
+        side: THREE.DoubleSide
+      });
+
+      this.barrierMesh = new THREE.Mesh(barrierGeo, barrierMat);
+      this.scene.add(this.barrierMesh);
     }
 
     buildStartFinishArch() {
@@ -1113,6 +1461,7 @@
           const building = new THREE.Mesh(bGeo, bMat);
           building.position.set(propPos.x, h / 2, propPos.z);
           this.scene.add(building);
+          this.environmentProps.push(building);
         } else if (this.zone.id === 'snow' || this.zone.id === 'forest') {
           // Archalar va daraxtlar
           const treeGroup = new THREE.Group();
@@ -1131,6 +1480,7 @@
 
           treeGroup.position.set(propPos.x, propPos.y, propPos.z);
           this.scene.add(treeGroup);
+          this.environmentProps.push(treeGroup);
         } else if (this.zone.id === 'desert') {
           // Qum piramidalari va qoyalar
           const rockGeo = new THREE.ConeGeometry(12, 16, 4);
@@ -1138,6 +1488,7 @@
           const rock = new THREE.Mesh(rockGeo, rockMat);
           rock.position.set(propPos.x, 8, propPos.z);
           this.scene.add(rock);
+          this.environmentProps.push(rock);
         } else if (this.zone.id === 'volcano') {
           // Vulqon qoyalari
           const vGeo = new THREE.DodecahedronGeometry(8 + Math.random() * 8, 1);
@@ -1149,8 +1500,20 @@
           const vMesh = new THREE.Mesh(vGeo, vMat);
           vMesh.position.set(propPos.x, 4, propPos.z);
           this.scene.add(vMesh);
+          this.environmentProps.push(vMesh);
         }
       }
+    }
+
+    destroy() {
+      if (this.trackMesh) this.scene.remove(this.trackMesh);
+      if (this.curbsMesh) this.scene.remove(this.curbsMesh);
+      if (this.barrierMesh) this.scene.remove(this.barrierMesh);
+      if (this.groundMesh) this.scene.remove(this.groundMesh);
+      if (this.archGroup) this.scene.remove(this.archGroup);
+      this.boostPads.forEach(b => this.scene.remove(b.mesh));
+      this.coins.forEach(c => this.scene.remove(c.mesh));
+      this.environmentProps.forEach(p => this.scene.remove(p));
     }
 
     update(delta) {
@@ -1232,7 +1595,7 @@
       const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
 
       const laneSide = this.gridIndex % 2 === 0 ? -2.8 : 2.8;
-      this.mesh.position.set(pt.x + normal.x * laneSide, 0, pt.z + normal.z * laneSide);
+      this.mesh.position.set(pt.x + normal.x * laneSide, 0.05, pt.z + normal.z * laneSide);
       
       const flatTangent = new THREE.Vector3(tangent.x, 0, tangent.z).normalize();
       this.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), flatTangent);
@@ -1320,16 +1683,26 @@
 
       this.mesh.rotateY(-turnSpeed);
 
-      // Harakat yo'nalishi
+      // Harakat yo'nalishi (qat'iy gorizontal tekislikda, mashina aslo havoga uchmaydi)
       const forwardVec = new THREE.Vector3(0, 0, 1).applyQuaternion(this.mesh.quaternion);
+      forwardVec.y = 0;
+      forwardVec.normalize();
       this.mesh.position.addScaledVector(forwardVec, this.speed * delta);
+      this.mesh.position.y = 0.05; // G'ildiraklar doim yo'l sirtida qat'iy turadi
+      this.mesh.rotation.x = 0; // Osmonga ko'tarilmaydi
+      this.mesh.rotation.z = 0; // Yonboshlab ketmaydi
 
-      // Yo'ldan chiqib ketish tekshiruvi (Off-road sekinlashuvi)
+      // Yo'l chegarasidan chiqmaslik va to'siqlar
       const closest = this.track.getClosestTrackPoint(this.mesh.position);
-      if (closest.dist > (this.track.trackWidth / 2 + 0.8)) {
-        this.speed *= 0.96;
-        if (Math.abs(this.speed) > 15 && Math.random() < 0.05) {
-          showDriftBadge('⚠️ YO\'LDAN CHIQIB KETDINGIZ!');
+      const roadLimit = this.track.trackWidth / 2 + 0.6;
+      if (closest.dist > roadLimit) {
+        // Yo'l chetidagi bordyur/to'siqqa urilib sekinlashadi va yo'l ichiga tortiladi
+        this.speed *= 0.8;
+        const trackCenter = this.track.curve.getPointAt(closest.t);
+        const toCenter = new THREE.Vector3(trackCenter.x - this.mesh.position.x, 0, trackCenter.z - this.mesh.position.z).normalize();
+        this.mesh.position.addScaledVector(toCenter, 0.4);
+        if (Math.abs(this.speed) > 10 && Math.random() < 0.05) {
+          showDriftBadge('🚧 YO\'L CHEGARASI!');
         }
       }
 
@@ -1389,9 +1762,15 @@
       const maxSpd = this.isNitroActive ? (this.maxSpeed * 1.25) : (this.maxSpeed * 0.95);
       this.speed = THREE.MathUtils.lerp(this.speed, maxSpd, delta * 1.8);
 
+      // Bot harakati (faqat yo'l tekisligida, aslo havoga uchmaydi)
       this.mesh.rotateY(steer * 2.2 * delta);
       const moveVec = new THREE.Vector3(0, 0, 1).applyQuaternion(this.mesh.quaternion);
+      moveVec.y = 0;
+      moveVec.normalize();
       this.mesh.position.addScaledVector(moveVec, this.speed * delta);
+      this.mesh.position.y = 0.05; // Botlar ham doim yo'l ustida yuradi
+      this.mesh.rotation.x = 0;
+      this.mesh.rotation.z = 0;
     }
 
     updateTrackPosition() {
@@ -1418,9 +1797,11 @@
     respawnOnTrack() {
       const pt = this.track.curve.getPointAt(this.trackProgress);
       const tangent = this.track.curve.getTangentAt(this.trackProgress).normalize();
-      this.mesh.position.copy(pt);
-      this.mesh.position.y += 0.3;
-      this.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tangent);
+      this.mesh.position.set(pt.x, 0.05, pt.z); // Aniq yerda
+      const flatTangent = new THREE.Vector3(tangent.x, 0, tangent.z).normalize();
+      this.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), flatTangent);
+      this.mesh.rotation.x = 0;
+      this.mesh.rotation.z = 0;
       this.speed = 0;
       showToast('Mashina yo\'lga qaytarildi!');
     }
@@ -1553,25 +1934,17 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    // Yoritish
-    const ambLight = new THREE.AmbientLight(0x223355, 1.2);
+    // Yoritish (Mashinalarning haqiqiy rangi va CAD chiziqlari aniq ko'rinishi uchun)
+    const ambLight = new THREE.AmbientLight(0xffffff, 1.35);
     scene.add(ambLight);
 
-    const dirLight = new THREE.DirectionalLight(0x00f3ff, 1.4);
-    dirLight.position.set(100, 150, 50);
+    const dirLight = new THREE.DirectionalLight(0xfff8ee, 1.5);
+    dirLight.position.set(80, 140, 60);
     dirLight.castShadow = true;
     scene.add(dirLight);
 
-    // Katta zamin tekisligi
-    const groundGeo = new THREE.PlaneGeometry(1600, 1600);
-    groundGeo.rotateX(-Math.PI / 2);
-    const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x070b19,
-      roughness: 0.9
-    });
-    const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    groundMesh.receiveShadow = true;
-    scene.add(groundMesh);
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x334155, 0.6);
+    scene.add(hemiLight);
 
     window.addEventListener('resize', onWindowResize);
     setupDesktopKeyboard();
@@ -1588,8 +1961,7 @@
 
     // Eski trassa va mashinalarni tozalash
     if (trackManager) {
-      if (trackManager.trackMesh) scene.remove(trackManager.trackMesh);
-      if (trackManager.curbsMesh) scene.remove(trackManager.curbsMesh);
+      trackManager.destroy();
     }
     racers.forEach(r => scene.remove(r.mesh));
     racers = [];
@@ -1618,6 +1990,12 @@
       );
       racers.push(botVehicle);
     }
+
+    // Kamerani DARHOL o'yinchi mashinasi orqasiga joylashtirish (uzoqdan uchib kelmasin!)
+    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(playerVehicle.mesh.quaternion);
+    camera.position.copy(playerVehicle.mesh.position).addScaledVector(forward, -7.5).add(new THREE.Vector3(0, 3.2, 0));
+    const lookTarget = new THREE.Vector3().copy(playerVehicle.mesh.position).addScaledVector(forward, 8).add(new THREE.Vector3(0, 1.2, 0));
+    camera.lookAt(lookTarget);
 
     // UI Overlaylarni almashtirish
     document.getElementById('main-menu-overlay').classList.add('hidden');
