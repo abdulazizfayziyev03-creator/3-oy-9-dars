@@ -1,12 +1,12 @@
 /**
  * ===================================================================
- * TURBO DRIFT 3D - ASOSIY O'YIN MOTORASI (GAME.JS)
+ * TURBO POYGA 3D - ASOSIY O'YIN MOTORASI (GAME.JS)
  * - 3D Poyga (Three.js)
  * - 12 kishilik poyga (Odamlar + Aqlli Botlar)
  * - WebRTC Onlayn Multiplayer (PeerJS, 12 o'yinchigacha)
  * - 5 xil Poyga Zonalari (Shahar, Sahro, Qor, Vulqon, O'rmon)
  * - Avto Bozor & Garaj (6 xil mashinalar, Upgradelar, Bo'yash)
- * - Web Audio API bilan haqiqiy motor va drift tovushlari
+ * - Web Audio API bilan haqiqiy motor tovushlari (Toza poyga haydash)
  * - Mobil telefonlar uchun to'liq sensorli boshqaruv
  * ===================================================================
  */
@@ -225,7 +225,7 @@
       id: 'snow',
       name: 'Qorli Cho\'qqilar',
       badge: 'Muzli Tog\'',
-      desc: 'Muzlagan ko\'l, qalin qor archalari va sirpanchiq ajoyib drift',
+      desc: 'Muzlagan ko\'l, qalin archalar va yuqori tezlikdagi qishki poyga yo\'li',
       cssClass: 'zone-snow',
       skyColor: 0x457b9d,
       fogColor: 0x1d3557,
@@ -276,7 +276,7 @@
     { name: 'Temur Poygachi', carId: 'car_monza', color: '#ef4444', skill: 0.95 },
     { name: 'Speedy_Uz', carId: 'car_gt', color: '#eab308', skill: 0.92 },
     { name: 'Vortex_99', carId: 'car_phantom', color: '#8b5cf6', skill: 0.96 },
-    { name: 'Drift_Master', carId: 'car_zenith', color: '#f8fafc', skill: 0.98 },
+    { name: 'Formula_Apex', carId: 'car_zenith', color: '#f8fafc', skill: 0.98 },
     { name: 'Falcon_X', carId: 'car_gt', color: '#eab308', skill: 0.88 },
     { name: 'Blaze_Tashkent', carId: 'car_venom', color: '#10b981', skill: 0.90 },
     { name: 'Shadow_Samarkand', carId: 'car_phantom', color: '#171717', skill: 0.93 },
@@ -338,31 +338,7 @@
     }
 
     createDriftSound() {
-      if (!this.ctx) return;
-      const bufferSize = this.ctx.sampleRate * 2;
-      const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-      const output = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        output[i] = Math.random() * 2 - 1;
-      }
-
-      const whiteNoise = this.ctx.createBufferSource();
-      whiteNoise.buffer = noiseBuffer;
-      whiteNoise.loop = true;
-
-      const bandpass = this.ctx.createBiquadFilter();
-      bandpass.type = 'bandpass';
-      bandpass.frequency.setValueAtTime(1200, this.ctx.currentTime);
-      bandpass.Q.setValueAtTime(3.0, this.ctx.currentTime);
-
-      this.driftGain = this.ctx.createGain();
-      this.driftGain.gain.setValueAtTime(0, this.ctx.currentTime);
-
-      whiteNoise.connect(bandpass);
-      bandpass.connect(this.driftGain);
-      this.driftGain.connect(this.ctx.destination);
-
-      whiteNoise.start();
+      // Drift tovushi o'chirilgan - faqat toza motor tovushi
     }
 
     updateEngine(speedKmh, isGas, isNitro) {
@@ -384,9 +360,7 @@
     }
 
     setDrift(active) {
-      if (!this.ctx || !GameData.settings.sound || !this.driftGain) return;
-      const targetGain = active ? 0.18 : 0;
-      this.driftGain.gain.setTargetAtTime(targetGain, this.ctx.currentTime, 0.06);
+      // Drift o'chirilgan
     }
 
     playNitroSound() {
@@ -1138,7 +1112,6 @@
       this.curve = null;
       this.trackMesh = null;
       this.curbsMesh = null;
-      this.barrierMesh = null;
       this.groundMesh = null;
       this.archGroup = null;
       this.coins = [];
@@ -1298,64 +1271,6 @@
       this.curbsMesh = new THREE.Mesh(curbGeo, curbMat);
       this.curbsMesh.receiveShadow = true;
       this.scene.add(this.curbsMesh);
-
-      this.buildBarriers();
-    }
-
-    buildBarriers() {
-      // Trassa ikki cheti bo'ylab metall to'siqlar (Guardrails)
-      const segments = this.trackPointsCount;
-      const barrierGeo = new THREE.BufferGeometry();
-      const barrierVerts = [];
-      const barrierIndices = [];
-
-      for (let i = 0; i <= segments; i++) {
-        const t = i / segments;
-        const pt = this.curve.getPointAt(t);
-        const tangent = this.curve.getTangentAt(t).normalize();
-        const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
-        const barrierDist = this.trackWidth / 2 + 1.6;
-
-        // Chap to'siq
-        const leftBottom = new THREE.Vector3().copy(pt).addScaledVector(normal, -barrierDist);
-        barrierVerts.push(leftBottom.x, 0.05, leftBottom.z);
-        barrierVerts.push(leftBottom.x, 0.85, leftBottom.z);
-
-        // O'ng to'siq
-        const rightBottom = new THREE.Vector3().copy(pt).addScaledVector(normal, barrierDist);
-        barrierVerts.push(rightBottom.x, 0.05, rightBottom.z);
-        barrierVerts.push(rightBottom.x, 0.85, rightBottom.z);
-
-        if (i < segments) {
-          const b1 = i * 4;
-          // Chap to'siq
-          barrierIndices.push(b1, b1 + 1, b1 + 4);
-          barrierIndices.push(b1 + 1, b1 + 5, b1 + 4);
-          barrierIndices.push(b1, b1 + 4, b1 + 1);
-          barrierIndices.push(b1 + 1, b1 + 4, b1 + 5);
-
-          // O'ng to'siq
-          const b2 = b1 + 2;
-          barrierIndices.push(b2, b2 + 1, b2 + 4);
-          barrierIndices.push(b2 + 1, b2 + 5, b2 + 4);
-          barrierIndices.push(b2, b2 + 4, b2 + 1);
-          barrierIndices.push(b2 + 1, b2 + 4, b2 + 5);
-        }
-      }
-
-      barrierGeo.setAttribute('position', new THREE.Float32BufferAttribute(barrierVerts, 3));
-      barrierGeo.setIndex(barrierIndices);
-      barrierGeo.computeVertexNormals();
-
-      const barrierMat = new THREE.MeshStandardMaterial({
-        color: 0x64748b,
-        metalness: 0.85,
-        roughness: 0.25,
-        side: THREE.DoubleSide
-      });
-
-      this.barrierMesh = new THREE.Mesh(barrierGeo, barrierMat);
-      this.scene.add(this.barrierMesh);
     }
 
     buildStartFinishArch() {
@@ -1508,7 +1423,6 @@
     destroy() {
       if (this.trackMesh) this.scene.remove(this.trackMesh);
       if (this.curbsMesh) this.scene.remove(this.curbsMesh);
-      if (this.barrierMesh) this.scene.remove(this.barrierMesh);
       if (this.groundMesh) this.scene.remove(this.groundMesh);
       if (this.archGroup) this.scene.remove(this.archGroup);
       this.boostPads.forEach(b => this.scene.remove(b.mesh));
@@ -1525,21 +1439,55 @@
       });
     }
 
-    getClosestTrackPoint(pos) {
-      // Mashinaning trassaga nisbatan t progressini hisoblash
-      let closestT = 0;
+    getClosestTrackPoint(pos, hintT) {
+      let bestT = 0;
       let minDistSq = Infinity;
-      const steps = 150;
-      for (let i = 0; i < steps; i++) {
-        const t = i / steps;
-        const pt = this.curve.getPointAt(t);
-        const distSq = pt.distanceToSquared(pos);
-        if (distSq < minDistSq) {
-          minDistSq = distSq;
-          closestT = t;
+
+      if (hintT !== undefined && hintT !== null && !isNaN(hintT)) {
+        // Mahalliy yuqori aniqlikdagi qidiruv (+/- 0.08 diapazonda)
+        const steps = 32;
+        for (let i = -steps; i <= steps; i++) {
+          let t = hintT + (i / steps) * 0.08;
+          t = (t % 1 + 1) % 1;
+          const pt = this.curve.getPointAt(t);
+          const dSq = pt.distanceToSquared(pos);
+          if (dSq < minDistSq) {
+            minDistSq = dSq;
+            bestT = t;
+          }
+        }
+      } else {
+        // Global to'liq qidiruv
+        const steps = 140;
+        for (let i = 0; i < steps; i++) {
+          const t = i / steps;
+          const pt = this.curve.getPointAt(t);
+          const dSq = pt.distanceToSquared(pos);
+          if (dSq < minDistSq) {
+            minDistSq = dSq;
+            bestT = t;
+          }
         }
       }
-      return { t: closestT, dist: Math.sqrt(minDistSq) };
+
+      // Nozik binar / oltin qism yaqinlashtirish (Sub-millimetr aniqlik)
+      let span = 0.005;
+      for (let iter = 0; iter < 4; iter++) {
+        const tMinus = ((bestT - span) % 1 + 1) % 1;
+        const tPlus = ((bestT + span) % 1 + 1) % 1;
+        const dMinus = this.curve.getPointAt(tMinus).distanceToSquared(pos);
+        const dPlus = this.curve.getPointAt(tPlus).distanceToSquared(pos);
+        if (dMinus < minDistSq) {
+          minDistSq = dMinus;
+          bestT = tMinus;
+        } else if (dPlus < minDistSq) {
+          minDistSq = dPlus;
+          bestT = tPlus;
+        }
+        span *= 0.5;
+      }
+
+      return { t: bestT, dist: Math.sqrt(minDistSq) };
     }
   }
 
@@ -1564,8 +1512,6 @@
 
       this.nitroGauge = 100;
       this.isNitroActive = false;
-      this.isDrifting = false;
-      this.driftPoints = 0;
 
       this.trackProgress = 0; // 0..1
       this.lap = 1;
@@ -1574,9 +1520,12 @@
       this.finishTime = 0;
 
       // Bot boshqaruv o'zgaruvchilari
+      this.laneOffset = 0;
+      this.lastTrackProgress = 0;
       this.botLaneOffset = (Math.random() - 0.5) * 6;
       this.botTargetT = 0;
       this.botNitroCooldown = 5 + Math.random() * 8;
+      this.smoothSteer = 0;
 
       // Mashina 3D modelini yaratamiz
       const color = isHuman ? (GameData.carColors[carConfig.id] || carConfig.color) : carConfig.color;
@@ -1594,7 +1543,10 @@
       const tangent = this.track.curve.getTangentAt(normT).normalize();
       const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
 
-      const laneSide = this.gridIndex % 2 === 0 ? -2.8 : 2.8;
+      const laneSide = this.gridIndex % 2 === 0 ? -2.4 : 2.4;
+      this.laneOffset = laneSide;
+      this.botLaneOffset = laneSide;
+      this.botTargetLane = laneSide;
       this.mesh.position.set(pt.x + normal.x * laneSide, 0.05, pt.z + normal.z * laneSide);
       
       const flatTangent = new THREE.Vector3(tangent.x, 0, tangent.z).normalize();
@@ -1603,6 +1555,7 @@
       this.mesh.rotation.z = 0;
 
       this.trackProgress = normT;
+      this.lastTrackProgress = normT;
     }
 
     update(delta, inputState) {
@@ -1620,8 +1573,8 @@
         this.mesh.userData.wheels.forEach(w => {
           w.mesh.rotation.x -= forwardDist * 2.2;
           if (w.isFront) {
-            // Rul burilganda old g'ildiraklar burchagi
-            const steerAngle = this.isHuman ? (inputState.steer * 0.45) : (this.botSteer || 0);
+            // Rul burilganda old g'ildiraklar burchagi (silliq va tabiiy)
+            const steerAngle = this.isHuman ? (this.smoothSteer * 0.35) : (this.botSteer || 0);
             w.group.rotation.y = steerAngle;
           }
         });
@@ -1637,14 +1590,14 @@
     }
 
     updateHumanPhysics(delta, input) {
-      // Upgradelarni qo'shamiz
+      // 1. Upgradelarni qo'shamiz
       const speedUpgradeMultiplier = 1 + (GameData.upgrades.engine - 1) * 0.06;
       const accelUpgradeMultiplier = 1 + (GameData.upgrades.accel - 1) * 0.08;
       const handlingUpgradeMultiplier = 1 + (GameData.upgrades.handling - 1) * 0.05;
 
       const effectiveMaxSpeed = this.maxSpeed * speedUpgradeMultiplier;
 
-      // Nitro
+      // 2. Nitro
       if (input.nitro && this.nitroGauge > 5) {
         this.isNitroActive = true;
         this.nitroGauge -= delta * 25;
@@ -1655,65 +1608,86 @@
         }
       }
 
-      // Tezlanish va Tormoz
+      // 3. Tezlanish va Tormoz (Avto-gaz bilan qulay va tabiiy poyga)
+      // Mashina startdan so'ng avtomatik ravishda poyga tezligida oldinga yuradi (Auto-Cruise)
+      // W / Up yoki GAZ bosilganda: Maksimal forsaj tezlanish (top speed)
+      // S / Down / Space yoki TORMOZ bosilganda: Tez to'xtash
       let targetAccel = 0;
-      if (input.gas) {
-        targetAccel = (this.acceleration * 4.5 * accelUpgradeMultiplier);
+      if (input.brake) {
+        targetAccel = -this.acceleration * 6.5; // Tormoz
+      } else if (input.gas || this.isNitroActive) {
+        targetAccel = (this.acceleration * 5.5 * accelUpgradeMultiplier); // Maksimal gaz
         if (this.isNitroActive) targetAccel *= 1.8;
-      } else if (input.brake) {
-        targetAccel = -this.acceleration * 5.0; // Kuchli tormoz
       } else {
-        targetAccel = -this.speed * 0.8; // Asfalt ishqalanishi
-      }
-
-      this.speed += targetAccel * delta;
-      const maxAllowedSpeed = this.isNitroActive ? (effectiveMaxSpeed * 1.35) : effectiveMaxSpeed;
-      this.speed = Math.max(-12, Math.min(this.speed, maxAllowedSpeed));
-
-      // Drift va Boshqaruv
-      this.isDrifting = input.drift && Math.abs(this.speed) > 15;
-      const steerFactor = (this.handling / 100) * handlingUpgradeMultiplier;
-      let turnSpeed = input.steer * steerFactor * 2.2 * delta;
-
-      if (this.isDrifting) {
-        turnSpeed *= 1.35;
-        this.driftPoints += Math.floor(Math.abs(this.speed) * delta * 25);
-        this.nitroGauge = Math.min(100, this.nitroGauge + delta * 14); // Drift paytida nitro tezroq to'ladi!
-      }
-
-      this.mesh.rotateY(-turnSpeed);
-
-      // Harakat yo'nalishi (qat'iy gorizontal tekislikda, mashina aslo havoga uchmaydi)
-      const forwardVec = new THREE.Vector3(0, 0, 1).applyQuaternion(this.mesh.quaternion);
-      forwardVec.y = 0;
-      forwardVec.normalize();
-      this.mesh.position.addScaledVector(forwardVec, this.speed * delta);
-      this.mesh.position.y = 0.05; // G'ildiraklar doim yo'l sirtida qat'iy turadi
-      this.mesh.rotation.x = 0; // Osmonga ko'tarilmaydi
-      this.mesh.rotation.z = 0; // Yonboshlab ketmaydi
-
-      // Yo'l chegarasidan chiqmaslik va to'siqlar
-      const closest = this.track.getClosestTrackPoint(this.mesh.position);
-      const roadLimit = this.track.trackWidth / 2 + 0.6;
-      if (closest.dist > roadLimit) {
-        // Yo'l chetidagi bordyur/to'siqqa urilib sekinlashadi va yo'l ichiga tortiladi
-        this.speed *= 0.8;
-        const trackCenter = this.track.curve.getPointAt(closest.t);
-        const toCenter = new THREE.Vector3(trackCenter.x - this.mesh.position.x, 0, trackCenter.z - this.mesh.position.z).normalize();
-        this.mesh.position.addScaledVector(toCenter, 0.4);
-        if (Math.abs(this.speed) > 10 && Math.random() < 0.05) {
-          showDriftBadge('🚧 YO\'L CHEGARASI!');
+        // Avto-gaz: Start berilganda mashina o'z-o'zidan poyga tezligida oldinga harakatlanadi
+        const cruiseSpeed = effectiveMaxSpeed * 0.85; // ~200-240 km/soat
+        if (this.speed < cruiseSpeed) {
+          targetAccel = this.acceleration * 4.0 * accelUpgradeMultiplier;
+        } else {
+          targetAccel = -this.speed * 0.4;
         }
       }
 
-      // Tovush yangilash
+      this.speed += targetAccel * delta;
+      const maxAllowedSpeed = this.isNitroActive ? (effectiveMaxSpeed * 1.35) : (input.gas ? effectiveMaxSpeed : effectiveMaxSpeed * 0.88);
+      this.speed = Math.max(0, Math.min(this.speed, maxAllowedSpeed));
+
+      // 4. Trassa bo'ylab oldinga toza yurish (Oddiy poyga harakati)
+      const trackLen = this.track.totalLength || 1500;
+      this.trackProgress = (this.trackProgress + (this.speed * delta) / trackLen + 1) % 1;
+
+      // 5. Rul boshqaruvi: Chapga va O'ngga yo'lak bo'yicha silliq siljish
+      // Mashina hech qachon 360 aylanmaydi, drift qilmaydi va yo'ldan chiqmaydi!
+      if (this.smoothSteer === undefined) this.smoothSteer = 0;
+      this.smoothSteer = THREE.MathUtils.lerp(this.smoothSteer, input.steer, delta * 5.5);
+
+      const steerSpeed = 8.0 * (this.handling / 100) * handlingUpgradeMultiplier;
+      if (this.laneOffset === undefined) this.laneOffset = 0;
+      this.laneOffset += this.smoothSteer * steerSpeed * delta;
+
+      // Trassa kengligi 14m (xavfsiz asfalt chegarasi: -5.0m dan +5.0m gacha)
+      this.laneOffset = Math.max(-5.0, Math.min(5.0, this.laneOffset));
+
+      // 6. Mashina 3D pozitsiyasi (qat'iy yo'l yuzasida, balandlik y = 0.05)
+      const pt = this.track.curve.getPointAt(this.trackProgress);
+      const tangent = this.track.curve.getTangentAt(this.trackProgress).normalize();
+      const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+
+      this.mesh.position.set(
+        pt.x + normal.x * this.laneOffset,
+        0.05,
+        pt.z + normal.z * this.laneOffset
+      );
+
+      // 7. Mashina yo'nalishi (Doim oldinga qarab turadi, 360 aylanmaydi!)
+      const aheadT = (this.trackProgress + 0.016) % 1;
+      const aheadPt = this.track.curve.getPointAt(aheadT);
+      const aheadTangent = this.track.curve.getTangentAt(aheadT).normalize();
+      const aheadNormal = new THREE.Vector3().crossVectors(aheadTangent, new THREE.Vector3(0, 1, 0)).normalize();
+      const targetLookPos = new THREE.Vector3(
+        aheadPt.x + aheadNormal.x * this.laneOffset,
+        0.05,
+        aheadPt.z + aheadNormal.z * this.laneOffset
+      );
+
+      const forwardDir = new THREE.Vector3().subVectors(targetLookPos, this.mesh.position).normalize();
+      forwardDir.y = 0;
+      if (forwardDir.lengthSq() > 0.0001) {
+        forwardDir.normalize();
+        this.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), forwardDir);
+        // Rul burilganda yengil tabiiy korpus qiyaligi (faqat 3-4 gradus, 360 emas!)
+        this.mesh.rotateY(-this.smoothSteer * 0.1);
+      }
+      this.mesh.rotation.x = 0;
+      this.mesh.rotation.z = 0;
+
+      // 8. Tovush yangilash (Sof poyga motor tovushi)
       const speedKmh = Math.abs(Math.round(this.speed * 3.6));
       audioSynth.updateEngine(speedKmh, input.gas, this.isNitroActive);
-      audioSynth.setDrift(this.isDrifting);
 
-      // Tangalarni yig'ish tekshiruvi
+      // 9. Tangalarni yig'ish tekshiruvi
       this.track.coins.forEach(c => {
-        if (!c.collected && c.mesh.position.distanceTo(this.mesh.position) < 2.5) {
+        if (!c.collected && c.mesh.position.distanceTo(this.mesh.position) < 2.8) {
           c.collected = true;
           this.scene.remove(c.mesh);
           GameData.addCoins(25);
@@ -1722,7 +1696,7 @@
         }
       });
 
-      // Tezlashtiruvchi pad tekshiruvi
+      // 10. Tezlashtiruvchi pad tekshiruvi
       this.track.boostPads.forEach(pad => {
         if (pad.mesh.position.distanceTo(this.mesh.position) < 3.2) {
           this.speed = effectiveMaxSpeed * 1.45;
@@ -1734,51 +1708,81 @@
     }
 
     updateBotAI(delta) {
-      // Bot trassa markazi bo'ylab harakatlanadi
-      this.botTargetT = (this.trackProgress + 0.012) % 1;
-      const targetPt = this.track.curve.getPointAt(this.botTargetT);
-      const tangent = this.track.curve.getTangentAt(this.botTargetT).normalize();
-      const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+      const trackLen = this.track.totalLength || 1500;
+      
+      // Egri burilishlarda tabiiy tormoz berish
+      const currentTangent = this.track.curve.getTangentAt(this.trackProgress).normalize();
+      const lookT = (this.trackProgress + 0.025) % 1;
+      const futureTangent = this.track.curve.getTangentAt(lookT).normalize();
+      const turnSharpness = Math.abs(currentTangent.x - futureTangent.x) + Math.abs(currentTangent.z - futureTangent.z);
+      
+      const isCurving = turnSharpness > 0.15;
+      let targetSpeed = this.maxSpeed * (isCurving ? 0.76 : 1.0);
 
-      const finalTarget = new THREE.Vector3().copy(targetPt).addScaledVector(normal, this.botLaneOffset);
-
-      // Bot burilish burchagini hisoblash
-      const dirToTarget = new THREE.Vector3().subVectors(finalTarget, this.mesh.position).normalize();
-      const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.mesh.quaternion);
-
-      const cross = new THREE.Vector3().crossVectors(forward, dirToTarget);
-      const steer = Math.max(-1, Math.min(1, cross.y * 3.5));
-      this.botSteer = steer;
-
-      // Nitro ishlatish
+      // Nitro ishlatish (faqat to'g'ri yo'llarda)
       this.botNitroCooldown -= delta;
-      if (this.botNitroCooldown <= 0) {
+      if (this.botNitroCooldown <= 0 && !isCurving) {
         this.isNitroActive = true;
-        setTimeout(() => { this.isNitroActive = false; }, 2000);
-        this.botNitroCooldown = 6 + Math.random() * 8;
+        targetSpeed = this.maxSpeed * 1.35;
+        setTimeout(() => { this.isNitroActive = false; }, 2200);
+        this.botNitroCooldown = 8 + Math.random() * 8;
       }
 
-      // Bot tezligi
-      const maxSpd = this.isNitroActive ? (this.maxSpeed * 1.25) : (this.maxSpeed * 0.95);
-      this.speed = THREE.MathUtils.lerp(this.speed, maxSpd, delta * 1.8);
+      this.speed = THREE.MathUtils.lerp(this.speed, targetSpeed, delta * 2.6);
 
-      // Bot harakati (faqat yo'l tekisligida, aslo havoga uchmaydi)
-      this.mesh.rotateY(steer * 2.2 * delta);
-      const moveVec = new THREE.Vector3(0, 0, 1).applyQuaternion(this.mesh.quaternion);
-      moveVec.y = 0;
-      moveVec.normalize();
-      this.mesh.position.addScaledVector(moveVec, this.speed * delta);
-      this.mesh.position.y = 0.05; // Botlar ham doim yo'l ustida yuradi
+      // Trassa progressi bo'yicha oldinga harakat
+      this.trackProgress = (this.trackProgress + (this.speed * delta) / trackLen + 1) % 1;
+
+      // Trassaning markazi va normali
+      const pt = this.track.curve.getPointAt(this.trackProgress);
+      const tangent = this.track.curve.getTangentAt(this.trackProgress).normalize();
+      const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+
+      // Botlar o'zaro quvib o'tishi uchun qulay yo'lak tanlashi (-3.5m dan +3.5m gacha)
+      if (this.botTargetLane === undefined) this.botTargetLane = this.botLaneOffset || 0;
+      if (Math.random() < 0.006) {
+        this.botTargetLane = (Math.random() - 0.5) * 6.6;
+      }
+      this.botLaneOffset = THREE.MathUtils.lerp(this.botLaneOffset, this.botTargetLane, delta * 1.4);
+      this.botLaneOffset = Math.max(-3.5, Math.min(3.5, this.botLaneOffset));
+
+      // Mashina qat'iy yo'l asfaltida turadi (aslo yo'ldan chiqa olmaydi)
+      this.mesh.position.set(
+        pt.x + normal.x * this.botLaneOffset,
+        0.05,
+        pt.z + normal.z * this.botLaneOffset
+      );
+
+      // Mashinaning yo'nalishi (Doim oldinga qarab turadi, 360 aylanmaydi)
+      const aheadT = (this.trackProgress + 0.02) % 1;
+      const aheadPt = this.track.curve.getPointAt(aheadT);
+      const aheadTangent = this.track.curve.getTangentAt(aheadT).normalize();
+      const aheadNormal = new THREE.Vector3().crossVectors(aheadTangent, new THREE.Vector3(0, 1, 0)).normalize();
+      const targetPos = new THREE.Vector3(
+        aheadPt.x + aheadNormal.x * this.botLaneOffset,
+        0.05,
+        aheadPt.z + aheadNormal.z * this.botLaneOffset
+      );
+
+      const lookDir = new THREE.Vector3().subVectors(targetPos, this.mesh.position).normalize();
+      if (lookDir.lengthSq() > 0.0001) {
+        lookDir.y = 0;
+        lookDir.normalize();
+        this.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), lookDir);
+      }
       this.mesh.rotation.x = 0;
       this.mesh.rotation.z = 0;
+
+      // Old g'ildiraklar burchagi
+      this.botSteer = isCurving ? (currentTangent.x * futureTangent.z - currentTangent.z * futureTangent.x) * 1.8 : 0;
     }
 
     updateTrackPosition() {
-      const closest = this.track.getClosestTrackPoint(this.mesh.position);
-      const oldT = this.trackProgress;
-      const newT = closest.t;
-
       // Aylana (Lap) hisoblash (Finish chizig'ini kesib o'tish)
+      if (this.lastTrackProgress === undefined) this.lastTrackProgress = this.trackProgress;
+      const oldT = this.lastTrackProgress;
+      const newT = this.trackProgress;
+
       if (oldT > 0.85 && newT < 0.15) {
         this.lap++;
         if (this.isHuman) {
@@ -1791,19 +1795,21 @@
         }
       }
 
-      this.trackProgress = newT;
+      this.lastTrackProgress = newT;
     }
 
     respawnOnTrack() {
+      this.laneOffset = 0;
+      this.smoothSteer = 0;
+      this.speed = 0;
       const pt = this.track.curve.getPointAt(this.trackProgress);
       const tangent = this.track.curve.getTangentAt(this.trackProgress).normalize();
-      this.mesh.position.set(pt.x, 0.05, pt.z); // Aniq yerda
+      this.mesh.position.set(pt.x, 0.05, pt.z);
       const flatTangent = new THREE.Vector3(tangent.x, 0, tangent.z).normalize();
       this.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), flatTangent);
       this.mesh.rotation.x = 0;
       this.mesh.rotation.z = 0;
-      this.speed = 0;
-      showToast('Mashina yo\'lga qaytarildi!');
+      showToast('Mashina yo\'l o\'rtasiga qaytarildi!');
     }
   }
 
@@ -1913,7 +1919,6 @@
     gas: false,
     brake: false,
     steer: 0,
-    drift: false,
     nitro: false
   };
 
@@ -2188,13 +2193,12 @@
       isRaceActive = false;
       const playerRank = racers.findIndex(r => r.isHuman) + 1;
 
-      // Mukofot hisoblash
-      let prizeCoins = 200;
-      if (playerRank === 1) prizeCoins = 1250;
-      else if (playerRank === 2) prizeCoins = 750;
-      else if (playerRank === 3) prizeCoins = 450;
+      // Mukofot hisoblash (G'alaba va toza finish bonusi)
+      let prizeCoins = 300;
+      if (playerRank === 1) prizeCoins = 1500;
+      else if (playerRank === 2) prizeCoins = 900;
+      else if (playerRank === 3) prizeCoins = 600;
 
-      prizeCoins += Math.floor(playerVehicle.driftPoints / 10);
       GameData.addCoins(prizeCoins);
 
       audioSynth.playVictorySound();
@@ -2209,7 +2213,7 @@
       document.getElementById('victory-coins-won').innerText = prizeCoins.toLocaleString();
       document.getElementById('victory-time').innerText = timeStr;
       document.getElementById('victory-max-speed').innerText = `${Math.round(playerVehicle.maxSpeed * 3.6)} km/s`;
-      document.getElementById('victory-drift').innerText = playerVehicle.driftPoints;
+      document.getElementById('victory-drift').innerText = playerRank === 1 ? '100% (A+)' : (playerRank <= 3 ? '95% (A)' : '85% (B)');
 
       document.getElementById('hud-overlay').classList.add('hidden');
       const tc = document.getElementById('touch-controls');
@@ -2224,10 +2228,9 @@
   function setupDesktopKeyboard() {
     window.addEventListener('keydown', (e) => {
       if (e.code === 'KeyW' || e.code === 'ArrowUp') inputState.gas = true;
-      if (e.code === 'KeyS' || e.code === 'ArrowDown') inputState.brake = true;
+      if (e.code === 'KeyS' || e.code === 'ArrowDown' || e.code === 'Space') inputState.brake = true;
       if (e.code === 'KeyA' || e.code === 'ArrowLeft') inputState.steer = -1;
       if (e.code === 'KeyD' || e.code === 'ArrowRight') inputState.steer = 1;
-      if (e.code === 'Space') inputState.drift = true;
       if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyN') {
         inputState.nitro = true;
         if (playerVehicle && playerVehicle.nitroGauge > 10) audioSynth.playNitroSound();
@@ -2242,14 +2245,13 @@
 
     window.addEventListener('keyup', (e) => {
       if (e.code === 'KeyW' || e.code === 'ArrowUp') inputState.gas = false;
-      if (e.code === 'KeyS' || e.code === 'ArrowDown') inputState.brake = false;
+      if (e.code === 'KeyS' || e.code === 'ArrowDown' || e.code === 'Space') inputState.brake = false;
       if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
         if (inputState.steer === -1) inputState.steer = 0;
       }
       if (e.code === 'KeyD' || e.code === 'ArrowRight') {
         if (inputState.steer === 1) inputState.steer = 0;
       }
-      if (e.code === 'Space') inputState.drift = false;
       if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyN') inputState.nitro = false;
     });
   }
@@ -2599,7 +2601,7 @@
   // -------------------------------------------------------------
   // 17. O'YINNI ISHGA TUSHIRISH (BOOTSTRAP)
   // -------------------------------------------------------------
-  window.addEventListener('DOMContentLoaded', () => {
+  function boot() {
     GameData.load();
     updateCoinDisplay();
     initGameEngine();
@@ -2615,6 +2617,12 @@
 
     // Animatsiya siklini yurgizish
     requestAnimationFrame(gameLoop);
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
 
 })();

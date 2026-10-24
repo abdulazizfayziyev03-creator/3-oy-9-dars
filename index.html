@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TURBO DRIFT 3D - Mashinalar Poygasi</title>
+  <title>TURBO POYGA 3D - Mashinalar Poygasi</title>
   <link rel="stylesheet" href="main.css">
   <!-- Three.js 3D Engine -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <!-- PeerJS WebRTC kutubxonasi (12 kishilik multiplayer uchun) -->
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js" defer></script>
 </head>
 <body>
 
@@ -34,7 +34,7 @@
   <!-- ASOSIY MENYU EKRANI -->
   <div id="main-menu-overlay" class="screen-overlay">
     <div class="game-logo">
-      <h1 class="game-title">TURBO DRIFT 3D</h1>
+      <h1 class="game-title">TURBO POYGA 3D</h1>
       <p class="game-subtitle">SUPER POYGA & MULTIPLAYER (12 O'YINCHI)</p>
     </div>
 
@@ -117,7 +117,7 @@
 
               <div class="stat-row">
                 <div class="stat-label-wrap">
-                  <span>Boshqaruv & Drift</span>
+                  <span>Boshqaruv (Grip)</span>
                   <span id="stat-handling-val">75%</span>
                 </div>
                 <div class="stat-bar-track">
@@ -334,10 +334,10 @@
       </div>
     </div>
 
-    <!-- O'rtadagi hisoblash va drift xabarlari -->
+    <!-- O'rtadagi hisoblash va poyga xabarlari -->
     <div class="hud-center-messages">
       <div class="countdown-number" id="hud-countdown"></div>
-      <div class="drift-badge" id="hud-drift-badge">DRIFT +500</div>
+      <div class="drift-badge" id="hud-drift-badge"></div>
     </div>
 
     <!-- Pastki HUD: Tezlik, Nitro va Jonli Liderlar -->
@@ -420,8 +420,8 @@
           <span class="v-stat-val" id="victory-max-speed">248 km/s</span>
         </div>
         <div class="v-stat">
-          <span class="v-stat-label">Drift Ball</span>
-          <span class="v-stat-val" id="victory-drift">1,800</span>
+          <span class="v-stat-label">Haydash Sifati</span>
+          <span class="v-stat-val" id="victory-drift">100% (A+)</span>
         </div>
       </div>
 
